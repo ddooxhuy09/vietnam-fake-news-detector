@@ -335,7 +335,7 @@ function displayResult(result) {
     if (method === 'cached') {
         html += `
             <div class="video-info" style="color: #ff9800; margin-top: 8px;">
-                📦 Kết quả từ cache (đã phân tích trước đó)
+                📦 Kết quả đã được phân tích trước đó
             </div>
         `;
     }

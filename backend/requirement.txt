@@ -9,10 +9,13 @@ python-dotenv==1.0.0
 supabase==2.0.3
 
 # ML/AI
-sentence-transformers==2.3.1
-onnxruntime==1.19.2
-transformers==4.34.0  # ← Downgrade to 4.34.0 (stable với torch 2.1.1)
-numpy==1.26.4 
+sentence-transformers==2.7.0  # ← Compatible with huggingface-hub 0.25+
+onnxruntime-gpu==1.19.2  # ← CUDA 12.x support (RTX 3050)
+transformers==4.44.0  # ← Compatible with huggingface-hub 0.25+
+huggingface-hub>=0.25.0  # ← Required by accelerate 1.12.0
+accelerate>=0.33.0  # ← Compatible with transformers 4.44
+numpy==1.26.4
+torch>=2.1.0  # ← For CUDA detection 
 
 # Vietnamese NLP / OCR
 vietocr==0.3.13
@@ -35,3 +38,5 @@ httpx==0.24.1
 # Utils
 pydantic==2.5.0
 
+languageflow==1.1.7
+underthesea

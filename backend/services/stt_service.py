@@ -6,6 +6,20 @@ import numpy as np
 
 logger = logging.getLogger(__name__)    
 
+# Auto-detect CUDA
+def get_device():
+    """Auto-detect CUDA availability"""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            logger.info(f"✅ CUDA available: {gpu_name}")
+            return "cuda"
+    except ImportError:
+        pass
+    logger.info("⚠️ Using CPU for Whisper")
+    return "cpu"
+
 try:
     import whisper
     STT_AVAILABLE = True
@@ -21,16 +35,17 @@ except ImportError:
     logger.warning("⚠️ librosa not available")
 
 class STTService:
-    def __init__(self, model_name: str = "large-v3", device: str = "cpu"):
+    def __init__(self, model_name: str = "medium", device: str = None):  # medium thay vì large-v3 (tiết kiệm 1.5GB VRAM)
         self.available = STT_AVAILABLE
-        self.device = device
+        # Auto-detect device if not specified
+        self.device = device if device else get_device()
         self.model = None
 
         if self.available:
             try:
-                logger.info(f"⏳ Loading Whisper model: {model_name} on {device}...")
-                self.model = whisper.load_model(model_name, device=device)
-                logger.info(f"✅ Whisper loaded ({model_name}, device={device})")
+                logger.info(f"⏳ Loading Whisper model: {model_name} on {self.device}...")
+                self.model = whisper.load_model(model_name, device=self.device)
+                logger.info(f"✅ Whisper loaded ({model_name}, device={self.device})")
             except Exception as e:
                 logger.error(f"❌ Failed to load Whisper: {e}")
                 self.available = False

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "TikTok Fake News Detector V3",
+  "name": "Kiểm Tin Giả - PTIT",
   "version": "2.2.2",
-  "description": "Phát hiện tin giả trên TikTok bằng AI",
+  "description": "Phát hiện tin giả trên TikTok bằng AI - PTIT",
   "permissions": [
     "activeTab",
     "storage",

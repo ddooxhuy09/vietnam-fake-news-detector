@@ -5,12 +5,55 @@ import os
 # ✅ LOAD .ENV TRƯỚC KHI IMPORT BẤT CỨ THỨ GÌ
 load_dotenv()
 
+# ============================================
+# CUDA Detection
+# ============================================
+def detect_cuda():
+    """Detect CUDA availability and return GPU info"""
+    cuda_info = {
+        "cuda_available": False,
+        "gpu_name": None,
+        "cuda_version": None,
+        "onnx_providers": ["CPUExecutionProvider"]
+    }
+    
+    try:
+        import torch
+        if torch.cuda.is_available():
+            cuda_info["cuda_available"] = True
+            cuda_info["gpu_name"] = torch.cuda.get_device_name(0)
+            cuda_info["cuda_version"] = torch.version.cuda
+            cuda_info["onnx_providers"] = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            print(f"✅ CUDA Available: {cuda_info['gpu_name']}")
+            print(f"✅ CUDA Version: {cuda_info['cuda_version']}")
+        else:
+            print("⚠️ CUDA not available, using CPU")
+    except ImportError:
+        print("⚠️ PyTorch not installed, checking ONNX Runtime...")
+        try:
+            import onnxruntime as ort
+            providers = ort.get_available_providers()
+            if "CUDAExecutionProvider" in providers:
+                cuda_info["cuda_available"] = True
+                cuda_info["onnx_providers"] = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+                print(f"✅ ONNX Runtime CUDA Provider available")
+            else:
+                print(f"⚠️ Available ONNX providers: {providers}")
+        except ImportError:
+            print("⚠️ ONNX Runtime not installed")
+    
+    return cuda_info
+
+# Detect CUDA on startup
+CUDA_INFO = detect_cuda()
+
 # Debug: Print để check
 print("="*50)
 print("Environment Variables:")
 print(f"SUPABASE_URL: {os.getenv('SUPABASE_URL', 'NOT SET')[:30]}...")
 print(f"SUPABASE_KEY: {os.getenv('SUPABASE_KEY', 'NOT SET')[:30]}...")
 print(f"MODEL_PATH: {os.getenv('MODEL_PATH', 'NOT SET')}")
+print(f"CUDA: {'✅ GPU' if CUDA_INFO['cuda_available'] else '❌ CPU only'}")
 print("="*50)
 
 # Sau đó mới import routers
@@ -73,7 +116,13 @@ def health():
     return {
         "status": "healthy",
         "model": "loaded" if model_exists else "missing",
-        "database": "connected" if supabase_connected else "not configured"
+        "database": "connected" if supabase_connected else "not configured",
+        "cuda": {
+            "available": CUDA_INFO["cuda_available"],
+            "gpu": CUDA_INFO["gpu_name"],
+            "version": CUDA_INFO["cuda_version"],
+            "providers": CUDA_INFO["onnx_providers"]
+        }
     }
 
 @app.exception_handler(Exception)

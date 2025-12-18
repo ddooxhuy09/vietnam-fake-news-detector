@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import cv2
 import logging
-from typing import List
+from typing import List, Tuple
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,20 @@ class MediaProcessor:
         self.temp_dir = Path(temp_dir)
         self.temp_dir.mkdir(exist_ok=True, parents=True)
         logger.info(f"🗂 Temp dir: {self.temp_dir.resolve()}")
+
+    @staticmethod
+    def detect_tiktok_type(url: str) -> str:
+        """
+        Detect TikTok content type from URL
+        Returns: 'video' | 'photo'
+        """
+        if "/photo/" in url:
+            return "photo"
+        elif "/video/" in url:
+            return "video"
+        else:
+            # Default to video if unclear
+            return "video"
 
     def download_media(self, url: str, video_id: str = None):
         """Download TikTok media (video or photo) using yt-dlp"""

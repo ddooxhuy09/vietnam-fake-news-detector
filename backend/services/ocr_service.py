@@ -7,6 +7,20 @@ import cv2
 
 logger = logging.getLogger(__name__)
 
+# Auto-detect CUDA for OCR
+def get_device():
+    """Auto-detect CUDA availability"""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            logger.info(f"✅ CUDA available for OCR: {gpu_name}")
+            return "cuda:0"
+    except ImportError:
+        pass
+    logger.info("⚠️ Using CPU for OCR")
+    return "cpu"
+
 try:
     from vietocr.tool.predictor import Predictor
     from vietocr.tool.config import Cfg
@@ -20,16 +34,17 @@ class OCRService:
     def __init__(self):
         self.available = HAS_VIETOCR
         self.predictor = None
+        self.device = get_device()
         
         if self.available:
             try:
                 # Load VietOCR config
                 config = Cfg.load_config_from_name('vgg_transformer')
-                config['device'] = 'cpu'
+                config['device'] = self.device  # Auto-detect GPU
                 config['predictor']['beamsearch'] = False  # Tắt beamsearch cho nhanh hơn
                 
                 self.predictor = Predictor(config)
-                logger.info("✅ VietOCR loaded (Vietnamese optimized)")
+                logger.info(f"✅ VietOCR loaded (device={self.device})")
             except Exception as e:
                 logger.error(f"Failed to load VietOCR: {e}")
                 self.available = False
@@ -76,4 +91,33 @@ class OCRService:
             
         except Exception as e:
             logger.error(f"VietOCR error: {e}")
+            return ""
+
+    def extract_text_from_image(self, image_path: str) -> str:
+        """Extract text from a single image file using VietOCR"""
+        
+        if not self.available:
+            logger.warning("VietOCR not available")
+            return ""
+        
+        try:
+            # Load image
+            image = cv2.imread(image_path)
+            if image is None:
+                logger.error(f"Cannot load image: {image_path}")
+                return ""
+            
+            # Convert BGR to RGB
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(image_rgb)
+            
+            # VietOCR predict
+            text = self.predictor.predict(pil_image)
+            text = text.strip()
+            
+            logger.info(f"✅ VietOCR extracted {len(text)} chars from image")
+            return text
+            
+        except Exception as e:
+            logger.error(f"VietOCR error on image: {e}")
             return ""

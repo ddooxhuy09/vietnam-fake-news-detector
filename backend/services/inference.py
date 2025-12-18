@@ -1,34 +1,33 @@
-# services/inference.py
+# services/inference.py 
 
 import onnxruntime as ort
 import numpy as np
 from transformers import AutoTokenizer
-from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer
+import torch
 from typing import Dict, List
 import logging
 import os
 import re
 import unicodedata
-import torch
 
 logger = logging.getLogger(__name__)
-
 
 # ===========================
 # TEXT PREPROCESSING
 # ===========================
 
 class VietnameseTextNormalizer:
-    """Text normalizer - GIỐNG TRAINING"""
+    """Text normalizer - EXACT MATCH với training"""
     
     def __init__(self):
         try:
             from underthesea import word_tokenize
             self.use_word_segment = True
-            logger.info("✅ Underthesea available - word segmentation enabled")
+            logger.info("✅ Underthesea available")
         except:
             self.use_word_segment = False
-            logger.warning("⚠️ Underthesea not available - word segmentation disabled")
+            logger.warning("⚠️ Underthesea not available")
     
     def normalize_unicode(self, text: str) -> str:
         return unicodedata.normalize("NFC", text)
@@ -46,10 +45,9 @@ class VietnameseTextNormalizer:
             return text
         try:
             from underthesea import word_tokenize
-            text = word_tokenize(text, format="text")
+            return word_tokenize(text, format="text")
         except:
-            pass
-        return text
+            return text
     
     def normalize(self, text: str) -> str:
         if not text or not isinstance(text, str):
@@ -64,16 +62,19 @@ class VietnameseTextNormalizer:
 
 
 class SemanticChunkRetriever:
-    """Chunk retriever - GIỐNG TRAINING"""
+    """Chunk retriever - EXACT MATCH với training"""
     
     def __init__(self, chunk_size=400):
         self.chunk_size = chunk_size
     
     def chunk_document(self, text: str) -> List[str]:
+        """EXACT COPY từ training code"""
         if not text or len(text.strip()) == 0:
             return []
         
-        sentences = re.split(r'[.!?\-]\s+', text)  # ← GIỐNG TRAINING
+        # ✅ GIỐNG TRAINING: Split by [.!?-]
+        sentences = re.split(r'[.!?\-]\s+', text)
+        
         chunks = []
         current_chunk = []
         current_len = 0
@@ -85,7 +86,7 @@ class SemanticChunkRetriever:
             
             sent_len = len(sent)
             
-            # ✅ Thêm logic handle oversized chunks (từ training)
+            # ✅ Handle oversized chunks (GIỐNG TRAINING)
             if current_len + sent_len > self.chunk_size:
                 if current_chunk:
                     chunks.append('. '.join(current_chunk))
@@ -95,6 +96,7 @@ class SemanticChunkRetriever:
                     words = sent.split()
                     temp_chunk = []
                     temp_len = 0
+                    
                     for word in words:
                         if temp_len + len(word) > self.chunk_size:
                             if temp_chunk:
@@ -104,6 +106,7 @@ class SemanticChunkRetriever:
                         else:
                             temp_chunk.append(word)
                             temp_len += len(word) + 1
+                    
                     if temp_chunk:
                         current_chunk = temp_chunk
                         current_len = temp_len
@@ -120,17 +123,14 @@ class SemanticChunkRetriever:
         return chunks
 
 
-
 # ===========================
 # HAN ONNX INFERENCE
 # ===========================
 
 class HANONNXInference:
     """
-    HAN Model Inference với ONNX Runtime
-    
-    CHẾ ĐỘ DUY NHẤT: Base prediction
-    RAG chỉ dùng để adjust confidence bên ngoài (trong router)
+    HAN Model Inference - CORRECTED VERSION
+    EXACT MATCH với training architecture
     """
     
     def __init__(
@@ -140,185 +140,195 @@ class HANONNXInference:
         retriever_model: str = "keepitreal/vietnamese-sbert",
         top_k: int = 5,
         chunk_size: int = 400,
-        max_length: int = 256
+        max_length: int = 256,
+        min_chunks: int = 3,
+        min_similarity: float = 0.15
     ):
         """
         Initialize HAN ONNX Inference
         
         Args:
-            model_path: Path to ONNX model (han_model.onnx)
+            model_path: Path to ONNX model (han_rag_model.onnx)
             tokenizer_path: Local tokenizer dir or HF model name
-            retriever_model: SentenceTransformer for RAG chunk selection
-            top_k: Number of chunks to select (default: 5, giống training)
+            retriever_model: SentenceTransformer for RAG
+            top_k: Number of chunks (default: 5, GIỐNG TRAINING)
             chunk_size: Max chars per chunk (default: 400)
-            max_length: Max sequence length (default: 256)
+            max_length: Max tokens per chunk (default: 256)
+            min_chunks: Minimum chunks required (default: 3)
+            min_similarity: Min cosine similarity (default: 0.15)
         """
-        # Get paths from env or use defaults
-        model_path = model_path or os.getenv("MODEL_PATH", "./models/han_model.onnx")
+        
+        model_path = model_path or os.getenv("MODEL_PATH", "./models/han_rag_model.onnx")
         tokenizer_path = tokenizer_path or os.getenv("TOKENIZER_PATH", "vinai/phobert-base-v2")
         
         logger.info("=" * 70)
-        logger.info("🔧 Initializing HAN ONNX Inference Service")
+        logger.info("🔧 Initializing HAN ONNX Inference (CORRECTED)")
         logger.info("=" * 70)
-        logger.info(f"   Model path: {model_path}")
-        logger.info(f"   Tokenizer: {tokenizer_path}")
-        logger.info(f"   Retriever: {retriever_model}")
-        logger.info(f"   Config: top_k={top_k}, chunk_size={chunk_size}, max_length={max_length}")
+        logger.info(f"  Model: {model_path}")
+        logger.info(f"  Tokenizer: {tokenizer_path}")
+        logger.info(f"  Retriever: {retriever_model}")
+        logger.info(f"  Config: top_k={top_k}, chunk_size={chunk_size}, max_length={max_length}")
         
-        # Check model exists
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"❌ Model not found: {model_path}")
         
-        # ===========================
-        # 1. LOAD ONNX MODEL
-        # ===========================
+        # 1. Load ONNX model với GPU support
         logger.info("📦 Loading ONNX model...")
-        try:
-            self.session = ort.InferenceSession(
-                model_path,
-                providers=['CPUExecutionProvider']
-            )
-            logger.info("✅ ONNX model loaded")
-        except Exception as e:
-            logger.error(f"❌ Failed to load ONNX model: {e}")
-            raise
+        # Auto-detect CUDA for ONNX Runtime
+        available_providers = ort.get_available_providers()
+        if 'CUDAExecutionProvider' in available_providers and torch.cuda.is_available():
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+            logger.info(f"✅ ONNX using GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            providers = ['CPUExecutionProvider']
+            logger.info("⚠️ ONNX using CPU (CUDA not available)")
         
-        # ===========================
-        # 2. LOAD TOKENIZER
-        # ===========================
+        self.session = ort.InferenceSession(
+            model_path,
+            providers=providers
+        )
+        logger.info(f"✅ ONNX model loaded (providers: {providers})")
+        
+        # 2. Load tokenizer
         logger.info("📦 Loading tokenizer...")
-        try:
-            if os.path.exists(tokenizer_path) and os.path.isdir(tokenizer_path):
-                # Load from local directory
-                logger.info("   Loading from local path...")
-                self.tokenizer = AutoTokenizer.from_pretrained(
-                    tokenizer_path,
-                    local_files_only=True
-                )
-            else:
-                # Load from HuggingFace
-                logger.info("   Downloading from HuggingFace...")
-                self.tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base-v2")
-            
-            logger.info("✅ Tokenizer loaded")
-        except Exception as e:
-            logger.error(f"❌ Failed to load tokenizer: {e}")
-            raise
+        if os.path.exists(tokenizer_path) and os.path.isdir(tokenizer_path):
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                tokenizer_path,
+                local_files_only=True
+            )
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base-v2")
+        logger.info("✅ Tokenizer loaded")
         
-        # ===========================
-        # 3. LOAD TEXT NORMALIZER
-        # ===========================
+        # 3. Load normalizer
         logger.info("📦 Initializing text normalizer...")
         self.normalizer = VietnameseTextNormalizer()
         
-        # ===========================
-        # 4. LOAD SENTENCE RETRIEVER (for RAG chunk selection)
-        # ===========================
+        # 4. Load retriever với GPU support
         logger.info("📦 Loading sentence retriever...")
+        # Auto-detect CUDA for SentenceTransformer
         try:
-            self.retriever = SentenceTransformer(retriever_model)
-            logger.info("✅ Sentence retriever loaded")
-        except Exception as e:
-            logger.error(f"❌ Failed to load retriever: {e}")
-            raise
+            if torch.cuda.is_available():
+                device = 'cuda'
+                logger.info(f"✅ SentenceTransformer using GPU: {torch.cuda.get_device_name(0)}")
+            else:
+                device = 'cpu'
+                logger.info("⚠️ SentenceTransformer using CPU (CUDA not available)")
+        except:
+            device = 'cpu'
+            logger.info("⚠️ SentenceTransformer using CPU")
         
-        # ===========================
-        # 5. INITIALIZE CHUNKER
-        # ===========================
+        self.retriever = SentenceTransformer(retriever_model, device=device)
+        logger.info(f"✅ Sentence retriever loaded (device: {device})")
+        
+        # 5. Initialize chunker
         self.chunker = SemanticChunkRetriever(chunk_size=chunk_size)
         
-        # ===========================
-        # 6. SET CONFIG
-        # ===========================
+        # 6. Config
         self.top_k = top_k
         self.max_length = max_length
+        self.min_chunks = min_chunks
+        self.min_similarity = min_similarity
         
         logger.info("=" * 70)
-        logger.info("✅ HAN ONNX Inference Service initialized successfully!")
+        logger.info("✅ HAN ONNX Inference initialized successfully!")
         logger.info("=" * 70)
     
     def _select_chunks_with_rag(self, title: str, content: str) -> List[str]:
         """
-        Internal RAG: Chọn top-k chunks từ CHÍNH BÀI VIẾT
-        
-        Dùng title làm query để tìm chunks quan trọng nhất
-        GIỐNG TRAINING!
+        RAG chunk selection - EXACT MATCH với training
         
         Args:
-            title: Video title/caption (normalized)
-            content: Video content (normalized)
+            title: Normalized title (used as query)
+            content: Normalized content (to be chunked)
         
         Returns:
-            List of selected chunks (max: self.top_k)
+            List of selected chunks (length = self.top_k)
         """
+        
         # 1. Chunk content
         raw_chunks = self.chunker.chunk_document(content)
         
         if not raw_chunks:
-            logger.warning("   No chunks generated, returning empty")
-            return [""]
+            logger.warning("  ⚠️ No chunks generated, returning empty list")
+            # ✅ GIỐNG TRAINING: Duplicate empty or use title
+            return [title if title else ""] * self.top_k
         
-        logger.info(f"   Generated {len(raw_chunks)} chunks from content")
+        logger.info(f"  Generated {len(raw_chunks)} chunks from content")
         
-        # 2. Nếu ít chunks hơn top_k, lấy hết
+        # 2. ✅ VALIDATE MINIMUM CHUNKS (GIỐNG TRAINING)
+        if len(raw_chunks) < self.min_chunks:
+            logger.info(f"  Only {len(raw_chunks)} chunks < {self.min_chunks}, duplicating...")
+            while len(raw_chunks) < self.min_chunks:
+                raw_chunks.extend(raw_chunks[:self.min_chunks - len(raw_chunks)])
+        
+        # 3. Nếu ít chunks, lấy hết
         if len(raw_chunks) <= self.top_k:
-            logger.info(f"   Using all {len(raw_chunks)} chunks (≤ top_k)")
-            return raw_chunks
+            logger.info(f"  Using all {len(raw_chunks)} chunks (≤ top_k)")
+            selected_chunks = raw_chunks[:]
+        else:
+            # 4. ✅ RAG: Use title as query (GIỐNG TRAINING)
+            query = title if len(title) > 5 else raw_chunks[0]
+            
+            try:
+                # Encode query và chunks
+                query_emb = self.retriever.encode(query, convert_to_tensor=True)
+                chunk_embs = self.retriever.encode(raw_chunks, convert_to_tensor=True)
+                
+                # ✅ Cosine similarity (GIỐNG TRAINING)
+                from sentence_transformers import util
+                scores = util.cos_sim(query_emb, chunk_embs)[0]
+                
+                # ✅ FILTER LOW-SIMILARITY CHUNKS (GIỐNG TRAINING)
+                valid_indices = (scores >= self.min_similarity).nonzero(as_tuple=True)[0]
+                
+                if len(valid_indices) < self.top_k:
+                    # Not enough valid chunks, take top-k anyway
+                    top_indices = scores.argsort(descending=True)[:self.top_k]
+                else:
+                    # Sort valid indices by similarity
+                    valid_sims = scores[valid_indices]
+                    sorted_valid = valid_indices[valid_sims.argsort(descending=True)]
+                    top_indices = sorted_valid[:self.top_k]
+                
+                selected_chunks = [raw_chunks[i] for i in top_indices.tolist()]
+                
+                logger.info(f"  ✅ RAG selected {len(selected_chunks)}/{len(raw_chunks)} chunks")
+                
+            except Exception as e:
+                logger.warning(f"  ⚠️ RAG failed: {e}, using fallback")
+                # Fallback: first + last chunks
+                mid = self.top_k // 2
+                selected_chunks = raw_chunks[:mid] + raw_chunks[-self.top_k + mid:]
+                selected_chunks = selected_chunks[:self.top_k]
         
-        # 3. RAG: Dùng title làm query
-        query = title if len(title) > 5 else raw_chunks[0]
+        # 5. ✅ NO EMPTY PADDING - DUPLICATE INSTEAD (GIỐNG TRAINING)
+        while len(selected_chunks) < self.top_k:
+            selected_chunks.append(
+                selected_chunks[0] if selected_chunks else title
+            )
         
-        try:
-            # Encode query và chunks
-            query_emb = self.retriever.encode(query, convert_to_tensor=True)
-            chunk_embs = self.retriever.encode(raw_chunks, convert_to_tensor=True)
-            
-            # Cosine similarity
-            scores = util.cos_sim(query_emb, chunk_embs)[0]
-            
-            # Top-k indices
-            topk_indices = torch.topk(
-                scores, 
-                k=min(self.top_k, len(raw_chunks))
-            ).indices.tolist()
-            
-            # Sort để giữ thứ tự xuất hiện trong content
-            topk_indices.sort()
-            
-            selected_chunks = [raw_chunks[i] for i in topk_indices]
-            
-            logger.info(f"   ✅ RAG selected {len(selected_chunks)}/{len(raw_chunks)} chunks")
-            
-            return selected_chunks
+        # Truncate if over
+        selected_chunks = selected_chunks[:self.top_k]
         
-        except Exception as e:
-            logger.warning(f"   ⚠️ RAG failed: {e}, using fallback")
-            
-            # Fallback: Lấy chunks đầu + cuối
-            mid = self.top_k // 2
-            selected_chunks = raw_chunks[:mid] + raw_chunks[-self.top_k + mid:]
-            
-            logger.info(f"   Using fallback: first {mid} + last {self.top_k - mid} chunks")
-            
-            return selected_chunks[:self.top_k]
+        return selected_chunks
     
-    def predict(self, title: str, content: str, return_top_chunk: bool = False) -> Dict:
+    def predict(self, title: str, content: str) -> Dict:
         """
-        Base model prediction
+        Predict with HAN model - CORRECTED VERSION
         
         Args:
             title: Video title/caption
-            content: Video content
-            return_top_chunk: If True, return top chunk for RAG query
+            content: Video content (OCR + STT combined)
         
         Returns:
             {
                 'prediction': 'FAKE' | 'REAL',
                 'confidence': float,
-                'probabilities': {...},
-                'top_chunk': str (optional)  # ← THÊM
+                'probabilities': {'REAL': float, 'FAKE': float}
             }
         """
+        
         try:
             logger.info("🤖 Running HAN model prediction...")
             
@@ -326,41 +336,45 @@ class HANONNXInference:
             title_norm = self.normalizer.normalize(title)
             content_norm = self.normalizer.normalize(content)
             
-            # 2. RAG chunk selection
+            logger.info(f"  Title: {title_norm[:100]}...")
+            logger.info(f"  Content: {len(content_norm)} chars")
+            
+            # 2. ✅ RAG chunk selection (GIỐNG TRAINING)
             selected_chunks = self._select_chunks_with_rag(title_norm, content_norm)
             
-            # LƯU TOP CHUNK (chunk quan trọng nhất)
-            top_chunk = selected_chunks[0] if selected_chunks else ""
-            
-            # DUPLICATE thay vì PAD EMPTY
-            while len(selected_chunks) < self.top_k:
-                selected_chunks.append(
-                    selected_chunks[0] if selected_chunks else ""
-                )
-            
-            # Truncate nếu quá
-            selected_chunks = selected_chunks[:self.top_k]
-            
-            # 4-7. Tokenize + Inference (giữ nguyên)
-            encoded = self.tokenizer(
+            # 3. ✅ Tokenize chunks với max_length=256 (GIỐNG TRAINING!)
+            chunk_encodings = self.tokenizer(
                 selected_chunks,
-                max_length=self.max_length,
+                max_length=self.max_length,  # 256
                 padding='max_length',
                 truncation=True,
                 return_tensors='np'
             )
             
-            chunk_input_ids = np.expand_dims(encoded['input_ids'], axis=0).astype(np.int64)
-            chunk_attention_masks = np.expand_dims(encoded['attention_mask'], axis=0).astype(np.int64)
+            # 4. ✅ Prepare ONNX inputs (ĐÚNG shape!)
+            chunk_input_ids = np.expand_dims(
+                chunk_encodings['input_ids'], axis=0
+            ).astype(np.int64)  # [1, 5, 256]
             
+            chunk_attention_masks = np.expand_dims(
+                chunk_encodings['attention_mask'], axis=0
+            ).astype(np.int64)  # [1, 5, 256]
+            
+            logger.info(f"  chunk_input_ids shape: {chunk_input_ids.shape}")
+            logger.info(f"  chunk_attention_masks shape: {chunk_attention_masks.shape}")
+            
+            # 5. ✅ Run ONNX inference (CHỈ 2 INPUTS!)
             onnx_inputs = {
                 'chunk_input_ids': chunk_input_ids,
                 'chunk_attention_masks': chunk_attention_masks
             }
             
             onnx_outputs = self.session.run(None, onnx_inputs)
-            logits = onnx_outputs[0][0]
             
+            # 6. Post-process
+            logits = onnx_outputs[0][0]  # [2]
+            
+            # Softmax
             exp_logits = np.exp(logits - np.max(logits))
             probs = exp_logits / np.sum(exp_logits)
             
@@ -370,7 +384,7 @@ class HANONNXInference:
             
             logger.info(f"✅ Prediction: {prediction} ({confidence:.4f})")
             
-            result = {
+            return {
                 'prediction': prediction,
                 'confidence': confidence,
                 'probabilities': {
@@ -379,13 +393,6 @@ class HANONNXInference:
                 }
             }
             
-            # ✅ THÊM TOP CHUNK NẾU CẦN
-            if return_top_chunk:
-                result['top_chunk'] = top_chunk
-                logger.info(f"   Top chunk: {top_chunk[:100]}...")
-            
-            return result
-        
         except Exception as e:
             logger.error(f"❌ Inference error: {e}", exc_info=True)
             raise

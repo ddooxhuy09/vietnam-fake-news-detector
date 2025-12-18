@@ -1,12 +1,12 @@
-# 🔍 TikTok Fake News Detector
+# 🔍 Kiểm Tin Giả - PTIT
 
-Hệ thống phát hiện tin giả trên TikTok sử dụng AI, tích hợp Chrome Extension và Backend API với các công nghệ Machine Learning tiên tiến.
+Hệ thống phát hiện tin giả trên TikTok sử dụng AI, tích hợp Chrome Extension và Backend API với các công nghệ Machine Learning tiên tiến. Dự án được phát triển bởi Học viện Công nghệ Bưu chính Viễn thông (PTIT).
 
 ## 📋 Tổng quan
 
 Dự án này là một hệ thống hoàn chỉnh để phát hiện tin giả trên nền tảng TikTok, bao gồm:
 
-- **Chrome Extension**: Extension trình duyệt để phân tích video TikTok trực tiếp trên trang web
+- **Chrome Extension**: Extension trình duyệt "Kiểm Tin Giả" để phân tích video TikTok trực tiếp trên trang web
 - **Backend API**: API server Python sử dụng FastAPI để xử lý phân tích và dự đoán
 - **Machine Learning Model**: Mô hình HAN (Hierarchical Attention Network) được tối ưu hóa với ONNX Runtime
 - **RAG System**: Hệ thống Retrieval-Augmented Generation để xác minh thông tin với nguồn tin đáng tin cậy
@@ -17,6 +17,7 @@ Dự án này là một hệ thống hoàn chỉnh để phát hiện tin giả 
 ```
 ┌─────────────────┐
 │ Chrome Extension│
+│ "Kiểm Tin Giả"  │
 │  (extension/)   │
 └────────┬────────┘
          │ HTTP API
@@ -32,6 +33,7 @@ Dự án này là một hệ thống hoàn chỉnh để phát hiện tin giả 
 ┌────────┐ ┌──────────┐
 │  HAN   │ │   RAG    │
 │ Model  │ │  Service │
+│ (GPU)  │ │  (GPU)   │
 └────────┘ └────┬─────┘
                 │
                 ▼
@@ -47,14 +49,15 @@ Dự án này là một hệ thống hoàn chỉnh để phát hiện tin giả 
 detect-fake-news/
 ├── backend/              # Python Backend API
 │   ├── routers/         # API endpoints
-│   ├── services/        # Business logic
+│   ├── services/        # Business logic (GPU-accelerated)
 │   ├── scripts/         # Utility scripts
 │   └── main.py          # FastAPI app entry
 │
-├── extension/            # Chrome Extension
+├── extension/            # Chrome Extension "Kiểm Tin Giả"
 │   ├── background/       # Service worker
 │   ├── content/          # Content scripts
-│   ├── popup/            # Extension popup UI
+│   ├── popup/            # Extension popup UI (PTIT branding)
+│   ├── icons/            # Extension icons + PTIT logo
 │   └── manifest.json     # Extension manifest
 │
 ├── crawl/               # Data crawling scripts
@@ -77,6 +80,7 @@ detect-fake-news/
 - Chrome/Edge browser
 - PostgreSQL với pgvector extension (hoặc Supabase)
 - FFmpeg (cho xử lý media)
+- **CUDA 12.x** (khuyến nghị) - GPU NVIDIA với driver tương thích
 
 ### 1. Cài đặt Backend API
 
@@ -84,6 +88,8 @@ detect-fake-news/
 cd backend
 pip install -r requirement.txt
 ```
+
+**Lưu ý:** Backend tự động detect CUDA. Nếu có GPU NVIDIA, tất cả services sẽ dùng GPU để tăng tốc.
 
 Tạo file `.env`:
 ```env
@@ -101,6 +107,13 @@ Chạy server:
 python main.py
 ```
 
+Server sẽ hiển thị CUDA info khi khởi động:
+```
+✅ CUDA Available: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+✅ CUDA Version: 12.1
+CUDA: ✅ GPU
+```
+
 ### 2. Cài đặt Chrome Extension
 
 ```bash
@@ -113,6 +126,7 @@ Load extension vào Chrome:
 2. Bật "Developer mode"
 3. Click "Load unpacked"
 4. Chọn thư mục `extension/`
+5. Extension sẽ hiển thị với tên **"Kiểm Tin Giả - PTIT"**
 
 ### 3. Setup Database
 
@@ -121,8 +135,11 @@ Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase h
 ## 🎯 Tính năng chính
 
 ### 1. Phân tích Video TikTok
-- Tự động trích xuất caption, OCR text, và STT từ video
-- Dự đoán tin giả/thật với độ tin cậy
+
+**Flow xử lý thông minh:**
+- **Video URL** (`/video/`) → Sử dụng **Whisper (STT)** để transcribe audio
+- **Photo URL** (`/photo/`) → Sử dụng **VietOCR** để extract text từ hình ảnh
+- Tự động detect loại content từ URL
 - Cache kết quả để tối ưu hiệu suất
 
 ### 2. RAG Verification
@@ -130,10 +147,12 @@ Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase h
 - Xác minh thông tin với similarity search
 - Điều chỉnh confidence dựa trên bằng chứng
 
-### 3. Heuristic Rules
-- Phát hiện clickbait patterns
-- Nhận diện tuyên bố tài chính không có nguồn chính thức
-- Xử lý các pattern đặc biệt của tiếng Việt
+### 3. GPU Acceleration
+- **Whisper (STT)**: GPU-accelerated với model `medium`
+- **VietOCR**: GPU support cho text extraction
+- **ONNX Model**: CUDA Execution Provider cho inference nhanh
+- **SentenceTransformer**: GPU cho embedding generation
+- Tự động fallback về CPU nếu không có GPU
 
 ### 4. User Reporting
 - Người dùng có thể báo cáo kết quả sai
@@ -143,17 +162,17 @@ Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase h
 
 ### Backend
 - **FastAPI**: Web framework
-- **ONNX Runtime**: Model inference tối ưu
+- **ONNX Runtime GPU**: Model inference tối ưu với CUDA
 - **Supabase**: Database và vector search
-- **Sentence Transformers**: Embedding generation
-- **VietOCR**: OCR tiếng Việt
-- **Whisper**: Speech-to-Text
+- **Sentence Transformers**: Embedding generation (GPU)
+- **VietOCR**: OCR tiếng Việt (GPU)
+- **Whisper**: Speech-to-Text (GPU)
 - **yt-dlp**: Video download
 
 ### Frontend
 - **Chrome Extension API**: Extension development
 - **Vanilla JavaScript**: UI logic
-- **ONNX Runtime Web**: Client-side inference (optional)
+- **Light Theme UI**: Giao diện sáng với logo PTIT
 
 ### ML/AI
 - **HAN Model**: Hierarchical Attention Network
@@ -164,7 +183,7 @@ Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase h
 ## 📊 Model Architecture
 
 ### HAN Model
-- **Input**: Title (caption) + Content (OCR + STT)
+- **Input**: Title (caption) + Content (OCR hoặc STT tùy loại URL)
 - **Tokenizer**: PhoBERT-base-v2
 - **Architecture**: Hierarchical Attention với chunk selection
 - **Output**: Binary classification (REAL/FAKE) với confidence score
@@ -177,6 +196,24 @@ Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase h
 4. Confidence adjustment dựa trên matching articles
 
 ## 📝 API Endpoints
+
+### `/health`
+Health check với CUDA info:
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "model": "loaded",
+  "database": "connected",
+  "cuda": {
+    "available": true,
+    "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+    "version": "12.1",
+    "providers": ["CUDAExecutionProvider", "CPUExecutionProvider"]
+  }
+}
+```
 
 ### `/api/v1/predict`
 Dự đoán tin giả/thật từ video TikTok
@@ -210,7 +247,11 @@ Dự đoán tin giả/thật từ video TikTok
 ```
 
 ### `/api/v1/process-media`
-Xử lý media (OCR + STT)
+Xử lý media (OCR hoặc STT tùy loại URL)
+
+**Flow:**
+- URL có `/video/` → Chỉ chạy STT (Whisper)
+- URL có `/photo/` → Chỉ chạy OCR (VietOCR)
 
 ### `/api/v1/report`
 Báo cáo kết quả sai
@@ -218,7 +259,7 @@ Báo cáo kết quả sai
 ## 🧪 Testing
 
 ```bash
-# Test API
+# Test API với CUDA info
 curl http://localhost:8000/health
 
 # Test prediction
@@ -229,10 +270,23 @@ curl -X POST http://localhost:8000/api/v1/predict \
 
 ## 📈 Performance
 
-- **Prediction time**: ~1-3 giây (không cache)
+- **Prediction time**: ~1-3 giây (không cache, GPU)
 - **Cache hit**: <100ms
-- **Media processing**: ~5-10 giây (OCR + STT)
-- **RAG search**: ~500ms-1s
+- **Media processing**: 
+  - Video (STT): ~3-5 giây (GPU)
+  - Photo (OCR): ~2-4 giây (GPU)
+- **RAG search**: ~500ms-1s (GPU)
+
+## 🎨 UI/UX
+
+### Extension Popup
+- **Tên**: "Kiểm Tin Giả - PTIT"
+- **Logo**: PTIT logo ở góc trái trên
+- **Theme**: Light theme với nền trắng, viền đen
+- **Color coding**:
+  - 🟢 REAL: Green (#2e7d32)
+  - 🔴 FAKE: Red (#d32f2f)
+  - ⚪ UNCERTAIN: Orange (#f57c00)
 
 ## 🔒 Bảo mật
 
@@ -257,6 +311,8 @@ Dự án này được phát hành dưới giấy phép MIT.
 - *[Đặng Thị Bích Trâm](https://github.com/jj4002)*
 - *[Đỗ Minh Bảo Huy](https://github.com/ddooxhuy09)*
 - *[Trần Anh Tuấn](https://github.com/tuanhqv123)*
+
+**Học viện Công nghệ Bưu chính Viễn thông (PTIT)**
 
 ## 🙏 Acknowledgments
 

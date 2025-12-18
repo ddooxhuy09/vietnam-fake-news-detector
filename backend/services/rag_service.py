@@ -24,8 +24,21 @@ class RAGService:
         if self.available:
             try:
                 model_name = os.getenv("EMBEDDING_MODEL", "keepitreal/vietnamese-sbert")
-                self.embedding_model = SentenceTransformer(model_name)
-                logger.info(f"✅ RAG enabled with {model_name}")
+                # Auto-detect CUDA for RAG SentenceTransformer
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        device = 'cuda'
+                        logger.info(f"✅ RAG using GPU: {torch.cuda.get_device_name(0)}")
+                    else:
+                        device = 'cpu'
+                        logger.info("⚠️ RAG using CPU (CUDA not available)")
+                except:
+                    device = 'cpu'
+                    logger.info("⚠️ RAG using CPU")
+                
+                self.embedding_model = SentenceTransformer(model_name, device=device)
+                logger.info(f"✅ RAG enabled with {model_name} (device: {device})")
             except Exception as e:
                 logger.error(f"Failed to load embedding model: {e}")
                 self.available = False
