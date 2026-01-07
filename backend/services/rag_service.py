@@ -24,51 +24,51 @@ from services.supabase_client import SupabaseService
 class ContentChunker:
     """Smart content chunker with sentence awareness."""
 
-    @staticmethod
-    def chunk_by_sentences(
-        text: str,
-        max_chunk_size: int = 300,
-        overlap_ratio: float = 0.3,
-    ) -> List[str]:
-        """Chunk text by sentences with overlap."""
-        sentences = re.split(r"[.!?]+\s+", text.strip())
-        sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
+    # @staticmethod
+    # def chunk_by_sentences(
+    #     text: str,
+    #     max_chunk_size: int = 300,
+    #     overlap_ratio: float = 0.3,
+    # ) -> List[str]:
+    #     """Chunk text by sentences with overlap."""
+    #     sentences = re.split(r"[.!?]+\s+", text.strip())
+    #     sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
 
-        if not sentences:
-            return [text[:max_chunk_size]]
+    #     if not sentences:
+    #         return [text[:max_chunk_size]]
 
-        chunks: List[str] = []
-        current_chunk: List[str] = []
-        current_len = 0
-        overlap_size = int(max_chunk_size * overlap_ratio)
+    #     chunks: List[str] = []
+    #     current_chunk: List[str] = []
+    #     current_len = 0
+    #     overlap_size = int(max_chunk_size * overlap_ratio)
 
-        for sentence in sentences:
-            sentence_len = len(sentence)
+    #     for sentence in sentences:
+    #         sentence_len = len(sentence)
 
-            if current_len + sentence_len > max_chunk_size and current_chunk:
-                # Save current chunk
-                chunks.append(" ".join(current_chunk))
+    #         if current_len + sentence_len > max_chunk_size and current_chunk:
+    #             # Save current chunk
+    #             chunks.append(" ".join(current_chunk))
 
-                # Build overlap chunk
-                overlap_sentences: List[str] = []
-                overlap_len = 0
-                for s in reversed(current_chunk):
-                    if overlap_len + len(s) <= overlap_size:
-                        overlap_sentences.insert(0, s)
-                        overlap_len += len(s)
-                    else:
-                        break
+    #             # Build overlap chunk
+    #             overlap_sentences: List[str] = []
+    #             overlap_len = 0
+    #             for s in reversed(current_chunk):
+    #                 if overlap_len + len(s) <= overlap_size:
+    #                     overlap_sentences.insert(0, s)
+    #                     overlap_len += len(s)
+    #                 else:
+    #                     break
 
-                current_chunk = overlap_sentences
-                current_len = overlap_len
+    #             current_chunk = overlap_sentences
+    #             current_len = overlap_len
 
-            current_chunk.append(sentence)
-            current_len += sentence_len
+    #         current_chunk.append(sentence)
+    #         current_len += sentence_len
 
-        if current_chunk:
-            chunks.append(" ".join(current_chunk))
+    #     if current_chunk:
+    #         chunks.append(" ".join(current_chunk))
 
-        return chunks
+    #     return chunks
 
     @staticmethod
     def extract_key_sentences(text: str, top_k: int = 3) -> str:

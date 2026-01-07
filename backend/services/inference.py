@@ -72,7 +72,7 @@ class SemanticChunkRetriever:
     def __init__(self, chunk_size: int = 400, chunk_overlap: int = 50):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        logger.info(f"✅ SemanticChunkRetriever: size={chunk_size}, overlap={chunk_overlap}")
+        logger.info(f"SemanticChunkRetriever: size={chunk_size}, overlap={chunk_overlap}")
     
     def chunk_document(self, text: str) -> List[str]:
         if not text or len(text.strip()) == 0:
@@ -134,7 +134,7 @@ class SemanticChunkRetriever:
 # ===========================
 
 class HANONNXInference:
-    """HAN Model Inference - SYNCED WITH v4.3 TRAINING"""
+    """HAN Model Inference - SYNCED WITH v4.1 TRAINING"""
     
     def __init__(
         self,
@@ -143,7 +143,7 @@ class HANONNXInference:
         retriever_model: str = "keepitreal/vietnamese-sbert",
         top_k: int = 5,
         chunk_size: int = 400,
-        chunk_overlap: int = 50,  # ← KEY CHANGE
+        chunk_overlap: int = 50,  
         max_length: int = 256,
         min_chunks: int = 3,
         min_similarity: float = 0.15
@@ -152,7 +152,7 @@ class HANONNXInference:
         tokenizer_path = tokenizer_path or os.getenv("TOKENIZER_PATH", "vinai/phobert-base-v2")
         
         logger.info("="*70)
-        logger.info("🚀 HAN ONNX Inference v4.3")
+        logger.info("🚀 HAN ONNX Inference v4.1")
         logger.info(f"  chunk_overlap={chunk_overlap} ← NEW")
         
         # Load ONNX
@@ -177,7 +177,7 @@ class HANONNXInference:
         self.min_chunks = min_chunks
         self.min_similarity = min_similarity
         
-        logger.info("✅ Initialized!")
+        logger.info("Initialized!")
     
     def _select_chunks_with_rag(self, title: str, content: str) -> List[str]:
         raw_chunks = self.chunker.chunk_document(content)
