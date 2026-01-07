@@ -24,55 +24,17 @@ from services.supabase_client import SupabaseService
 class ContentChunker:
     """Smart content chunker with sentence awareness."""
 
-    # @staticmethod
-    # def chunk_by_sentences(
-    #     text: str,
-    #     max_chunk_size: int = 300,
-    #     overlap_ratio: float = 0.3,
-    # ) -> List[str]:
-    #     """Chunk text by sentences with overlap."""
-    #     sentences = re.split(r"[.!?]+\s+", text.strip())
-    #     sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
-
-    #     if not sentences:
-    #         return [text[:max_chunk_size]]
-
-    #     chunks: List[str] = []
-    #     current_chunk: List[str] = []
-    #     current_len = 0
-    #     overlap_size = int(max_chunk_size * overlap_ratio)
-
-    #     for sentence in sentences:
-    #         sentence_len = len(sentence)
-
-    #         if current_len + sentence_len > max_chunk_size and current_chunk:
-    #             # Save current chunk
-    #             chunks.append(" ".join(current_chunk))
-
-    #             # Build overlap chunk
-    #             overlap_sentences: List[str] = []
-    #             overlap_len = 0
-    #             for s in reversed(current_chunk):
-    #                 if overlap_len + len(s) <= overlap_size:
-    #                     overlap_sentences.insert(0, s)
-    #                     overlap_len += len(s)
-    #                 else:
-    #                     break
-
-    #             current_chunk = overlap_sentences
-    #             current_len = overlap_len
-
-    #         current_chunk.append(sentence)
-    #         current_len += sentence_len
-
-    #     if current_chunk:
-    #         chunks.append(" ".join(current_chunk))
-
-    #     return chunks
+    @staticmethod
+    def clean_hashtags(text: str) -> str:
+        """Remove hashtags and mentions from text."""
+        text = re.sub(r'#[^\s]+', '', text)  # Remove hashtags
+        text = re.sub(r'@[^\s]+', '', text)  # Remove mentions
+        return re.sub(r'\s+', ' ', text).strip()
 
     @staticmethod
     def extract_key_sentences(text: str, top_k: int = 3) -> str:
         """Extract key sentences (first + longest + last)."""
+        text = ContentChunker.clean_hashtags(text)
         sentences = re.split(r"[.!?]+\s+", text.strip())
         sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
 
@@ -117,18 +79,30 @@ class QueryGenerator:
 
         queries: List[Tuple[str, float]] = []
 
+        # Clean hashtags from title
+        clean_title = self.chunker.clean_hashtags(title) if title else ""
+
+        # Clean hashtags from content
+        clean_content = self.chunker.clean_hashtags(content) if content else ""
+
         # Query 1: Title only (weight 1.0)
-        if title and len(title.strip()) > 10:
-            queries.append((title.strip(), 1.0))
+        if clean_title and len(clean_title.strip()) > 10:
+            queries.append((clean_title.strip(), 1.0))
 
         # Query 2: Title + key content (weight 1.3 - most important)
-        if content:
-            key_sentences = self.chunker.extract_key_sentences(content, top_k=2)
-            combined = f"{title} {key_sentences}"[:500]
+        if clean_content:
+            key_sentences = self.chunker.extract_key_sentences(clean_content, top_k=2)
+            combined = f"{clean_title} {key_sentences}"[:500]
             if len(combined.strip()) > 10:
                 queries.append((combined, 1.3))
 
-        return queries if queries else [(title or content, 1.0)]
+        # Query 3: Key content only (fallback for short titles with hashtags)
+        if clean_content:
+            key_sentences = self.chunker.extract_key_sentences(clean_content, top_k=3)
+            if key_sentences and len(key_sentences.strip()) > 20:
+                queries.append((key_sentences, 1.0))
+
+        return queries if queries else [(clean_title or clean_content, 1.0)]
 
 
 # ============================================================
@@ -151,8 +125,8 @@ class AdaptiveThreshold:
         Returns:
             (search_threshold, verify_threshold)
         """
-        base_search = 0.72      # Base search threshold (increased from 0.70)
-        base_verify = 0.87      # Base verify threshold (increased from 0.85)
+        base_search = 0.65      # Base search threshold (decreased from 0.72)
+        base_verify = 0.80      # Base verify threshold (decreased from 0.87)
 
         total_len = title_length + content_length
 
@@ -165,8 +139,8 @@ class AdaptiveThreshold:
             len_adj = 0.0       # Normal
 
         # Calculate final thresholds with bounds
-        search_th = max(0.68, min(0.75, base_search + len_adj))
-        verify_th = max(0.83, min(0.92, base_verify + len_adj))
+        search_th = max(0.60, min(0.70, base_search + len_adj))
+        verify_th = max(0.75, min(0.85, base_verify + len_adj))
 
         return search_th, verify_th
 
@@ -364,6 +338,12 @@ class RAGService:
 
         if any(kw in text_lower for kw in breaking_keywords):
             logger.info("RAG triggered: Breaking news")
+            return True
+
+        # Rule 4: Fallback - Always use RAG for medium confidence (DEBUG)
+        # This helps ensure RAG runs even if no keywords match
+        if 0.5 <= base_confidence <= 0.95:
+            logger.info("RAG triggered: Medium confidence fallback (%.2f)", base_confidence)
             return True
 
         logger.info("RAG not triggered: Normal content")
