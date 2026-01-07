@@ -1,18 +1,18 @@
-# 🔍 Kiểm Tin Giả - PTIT
+# 🔍 Vietnam Fake News Detector - PTIT
 
-Hệ thống phát hiện tin giả trên TikTok sử dụng AI, tích hợp Chrome Extension và Backend API với các công nghệ Machine Learning tiên tiến. Dự án được phát triển bởi Học viện Công nghệ Bưu chính Viễn thông (PTIT).
+An AI-powered fake news detection system for TikTok videos, integrating Chrome Extension and Backend API with advanced Machine Learning technologies. Developed by Posts and Telecommunications Institute of Technology (PTIT).
 
-## 📋 Tổng quan
+## 📋 Overview
 
-Dự án này là một hệ thống hoàn chỉnh để phát hiện tin giả trên nền tảng TikTok, bao gồm:
+This project is a complete system for detecting fake news on TikTok platform, including:
 
-- **Chrome Extension**: Extension trình duyệt "Kiểm Tin Giả" để phân tích video TikTok trực tiếp trên trang web
-- **Backend API**: API server Python sử dụng FastAPI để xử lý phân tích và dự đoán
-- **Machine Learning Model**: Mô hình HAN (Hierarchical Attention Network) được tối ưu hóa với ONNX Runtime
-- **RAG System**: Hệ thống Retrieval-Augmented Generation để xác minh thông tin với nguồn tin đáng tin cậy
-- **Media Processing**: Xử lý video/ảnh với OCR (Optical Character Recognition) và STT (Speech-to-Text)
+- **Chrome Extension**: Browser extension "Kiểm Tin Giả" to analyze TikTok videos directly on the website
+- **Backend API**: Python API server using FastAPI for analysis and prediction
+- **Machine Learning Model**: HAN (Hierarchical Attention Network) model optimized with ONNX Runtime
+- **RAG System**: Retrieval-Augmented Generation system to verify information with trusted news sources
+- **Media Processing**: Video/image processing with OCR (Optical Character Recognition) and STT (Speech-to-Text)
 
-## 🏗️ Kiến trúc hệ thống
+## 🏗️ System Architecture
 
 ```
 ┌─────────────────┐
@@ -43,7 +43,7 @@ Dự án này là một hệ thống hoàn chỉnh để phát hiện tin giả 
          └──────────────┘
 ```
 
-## 📁 Cấu trúc thư mục
+## 📁 Directory Structure
 
 ```
 detect-fake-news/
@@ -64,34 +64,42 @@ detect-fake-news/
 │   ├── crawl_video.py   # TikTok video crawler
 │   └── *.ipynb          # Data processing notebooks
 │
-└── train/               # Model training & experiments
-    ├── train-baseline-phobert.py    # Experiment 1: Baseline PhoBERT
-    ├── train-author-embedding.py    # Experiment 2: PhoBERT + Author Embedding
-    ├── train-MLM_Prompt.py          # Experiment 3: Prompt-based MLM
-    └── train-rag-han.ipynb          # Experiment 4: HAN + RAG (Production)
+├── dataset/             # Datasets and analysis
+│   ├── final_dataset_for_training.csv
+│   ├── analysis_fake_real.py
+│   └── data_analysis.ipynb
+│
+├── train/               # Model training & experiments
+│   ├── train-baseline-phobert.py    # Experiment 1: Baseline PhoBERT
+│   ├── train-author-embedding.py    # Experiment 2: PhoBERT + Author Embedding
+│   ├── train-MLM_Prompt.py          # Experiment 3: Prompt-based MLM
+│   └── RAG_HAN_v4.ipynb             # Experiment 4: HAN + RAG (Production)
+│
+└── models/              # Trained models
+    └── han_rag_model.onnx
 ```
 
-## 🚀 Cài đặt và Chạy
+## 🚀 Installation and Setup
 
-### Yêu cầu hệ thống
+### System Requirements
 
 - Python 3.8+
 - Node.js 16+
 - Chrome/Edge browser
-- PostgreSQL với pgvector extension (hoặc Supabase)
-- FFmpeg (cho xử lý media)
-- **CUDA 12.x** (khuyến nghị) - GPU NVIDIA với driver tương thích
+- PostgreSQL with pgvector extension (or Supabase)
+- FFmpeg (for media processing)
+- **CUDA 12.x** (recommended) - NVIDIA GPU with compatible driver
 
-### 1. Cài đặt Backend API
+### 1. Backend API Setup
 
 ```bash
 cd backend
 pip install -r requirement.txt
 ```
 
-**Lưu ý:** Backend tự động detect CUDA. Nếu có GPU NVIDIA, tất cả services sẽ dùng GPU để tăng tốc.
+**Note:** Backend automatically detects CUDA. If NVIDIA GPU is available, all services will use GPU for acceleration.
 
-Tạo file `.env`:
+Create `.env` file:
 ```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
@@ -102,77 +110,77 @@ PORT=8000
 HOST=0.0.0.0
 ```
 
-Chạy server:
+Run server:
 ```bash
 python main.py
 ```
 
-Server sẽ hiển thị CUDA info khi khởi động:
+Server will display CUDA info on startup:
 ```
 ✅ CUDA Available: NVIDIA GeForce RTX 3050 Ti Laptop GPU
 ✅ CUDA Version: 12.1
 CUDA: ✅ GPU
 ```
 
-### 2. Cài đặt Chrome Extension
+### 2. Chrome Extension Setup
 
 ```bash
 cd extension
 npm install
 ```
 
-Load extension vào Chrome:
-1. Mở `chrome://extensions/`
-2. Bật "Developer mode"
+Load extension into Chrome:
+1. Open `chrome://extensions/`
+2. Enable "Developer mode"
 3. Click "Load unpacked"
-4. Chọn thư mục `extension/`
-5. Extension sẽ hiển thị với tên **"Kiểm Tin Giả - PTIT"**
+4. Select `extension/` folder
+5. Extension will appear as **"Kiểm Tin Giả - PTIT"**
 
-### 3. Setup Database
+### 3. Database Setup
 
-Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase hoặc PostgreSQL.
+Run SQL schema from `extension/database/supabase_schema.sql` on Supabase or PostgreSQL.
 
-## 🎯 Tính năng chính
+## 🎯 Key Features
 
-### 1. Phân tích Video TikTok
+### 1. TikTok Video Analysis
 
-**Flow xử lý thông minh:**
-- **Video URL** (`/video/`) → Sử dụng **Whisper (STT)** để transcribe audio
-- **Photo URL** (`/photo/`) → Sử dụng **VietOCR** để extract text từ hình ảnh
-- Tự động detect loại content từ URL
-- Cache kết quả để tối ưu hiệu suất
+**Smart processing flow:**
+- **Video URL** (`/video/`) → Uses **Whisper (STT)** to transcribe audio
+- **Photo URL** (`/photo/`) → Uses **VietOCR** to extract text from images
+- Automatically detects content type from URL
+- Caches results for optimal performance
 
 ### 2. RAG Verification
-- Tìm kiếm bài viết tương tự từ nguồn tin đáng tin cậy
-- Xác minh thông tin với similarity search
-- Điều chỉnh confidence dựa trên bằng chứng
+- Searches for similar articles from trusted news sources
+- Verifies information with similarity search
+- Adjusts confidence based on evidence
 
 ### 3. GPU Acceleration
-- **Whisper (STT)**: GPU-accelerated với model `medium`
-- **VietOCR**: GPU support cho text extraction
-- **ONNX Model**: CUDA Execution Provider cho inference nhanh
-- **SentenceTransformer**: GPU cho embedding generation
-- Tự động fallback về CPU nếu không có GPU
+- **Whisper (STT)**: GPU-accelerated with `medium` model
+- **VietOCR**: GPU support for text extraction
+- **ONNX Model**: CUDA Execution Provider for fast inference
+- **SentenceTransformer**: GPU for embedding generation
+- Automatic fallback to CPU if GPU unavailable
 
 ### 4. User Reporting
-- Người dùng có thể báo cáo kết quả sai
-- Hệ thống tracking để cải thiện model
+- Users can report incorrect results
+- System tracking to improve model
 
-## 🔧 Công nghệ sử dụng
+## 🔧 Technologies Used
 
 ### Backend
 - **FastAPI**: Web framework
-- **ONNX Runtime GPU**: Model inference tối ưu với CUDA
-- **Supabase**: Database và vector search
+- **ONNX Runtime GPU**: Optimized model inference with CUDA
+- **Supabase**: Database and vector search
 - **Sentence Transformers**: Embedding generation (GPU)
-- **VietOCR**: OCR tiếng Việt (GPU)
+- **VietOCR**: Vietnamese OCR (GPU)
 - **Whisper**: Speech-to-Text (GPU)
 - **yt-dlp**: Video download
 
 ### Frontend
 - **Chrome Extension API**: Extension development
 - **Vanilla JavaScript**: UI logic
-- **Light Theme UI**: Giao diện sáng với logo PTIT
+- **Light Theme UI**: Light interface with PTIT logo
 
 ### ML/AI
 - **HAN Model**: Hierarchical Attention Network
@@ -183,22 +191,22 @@ Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase h
 ## 📊 Model Architecture
 
 ### HAN Model
-- **Input**: Title (caption) + Content (OCR hoặc STT tùy loại URL)
+- **Input**: Title (caption) + Content (OCR or STT depending on URL type)
 - **Tokenizer**: PhoBERT-base-v2
-- **Architecture**: Hierarchical Attention với chunk selection
-- **Output**: Binary classification (REAL/FAKE) với confidence score
-- **Model trên HuggingFace**: [vn_fake_news_v2](https://huggingface.co/jamus0702/vn_fake_news_v2/tree/main)
+- **Architecture**: Hierarchical Attention with chunk selection
+- **Output**: Binary classification (REAL/FAKE) with confidence score
+- **Model on HuggingFace**: [vn_fake_news_v2](https://huggingface.co/jamus0702/vn_fake_news_v2/tree/main)
 
 ### RAG Pipeline
-1. Chunk selection từ content dựa trên title similarity
-2. Vector search trong news corpus
-3. Similarity threshold: 0.75
-4. Confidence adjustment dựa trên matching articles
+1. Chunk selection from content based on title similarity
+2. Vector search in news corpus
+3. Similarity threshold: Adaptive (0.5-0.7 for search, 0.6-0.85 for verification)
+4. Confidence adjustment based on matching articles
 
 ## 📝 API Endpoints
 
 ### `/health`
-Health check với CUDA info:
+Health check with CUDA info:
 
 **Response:**
 ```json
@@ -216,7 +224,7 @@ Health check với CUDA info:
 ```
 
 ### `/api/v1/predict`
-Dự đoán tin giả/thật từ video TikTok
+Predict fake/real news from TikTok video
 
 **Request:**
 ```json
@@ -247,19 +255,22 @@ Dự đoán tin giả/thật từ video TikTok
 ```
 
 ### `/api/v1/process-media`
-Xử lý media (OCR hoặc STT tùy loại URL)
+Process media (OCR or STT depending on URL type)
 
 **Flow:**
-- URL có `/video/` → Chỉ chạy STT (Whisper)
-- URL có `/photo/` → Chỉ chạy OCR (VietOCR)
+- URL contains `/video/` → Only runs STT (Whisper)
+- URL contains `/photo/` → Only runs OCR (VietOCR)
 
 ### `/api/v1/report`
-Báo cáo kết quả sai
+Report incorrect results
+
+### `/api/v1/predict-text`
+Predict from text only (without media processing)
 
 ## 🧪 Testing
 
 ```bash
-# Test API với CUDA info
+# Test API with CUDA info
 curl http://localhost:8000/health
 
 # Test prediction
@@ -270,32 +281,32 @@ curl -X POST http://localhost:8000/api/v1/predict \
 
 ## 📈 Performance
 
-- **Prediction time**: ~1-3 giây (không cache, GPU)
+- **Prediction time**: ~1-3 seconds (no cache, GPU)
 - **Cache hit**: <100ms
 - **Media processing**: 
-  - Video (STT): ~3-5 giây (GPU)
-  - Photo (OCR): ~2-4 giây (GPU)
+  - Video (STT): ~3-5 seconds (GPU)
+  - Photo (OCR): ~2-4 seconds (GPU)
 - **RAG search**: ~500ms-1s (GPU)
 
 ## 🎨 UI/UX
 
 ### Extension Popup
-- **Tên**: "Kiểm Tin Giả - PTIT"
-- **Logo**: PTIT logo ở góc trái trên
-- **Theme**: Light theme với nền trắng, viền đen
+- **Name**: "Kiểm Tin Giả - PTIT"
+- **Logo**: PTIT logo at top left
+- **Theme**: Light theme with white background, black border
 - **Color coding**:
   - 🟢 REAL: Green (#2e7d32)
   - 🔴 FAKE: Red (#d32f2f)
   - ⚪ UNCERTAIN: Orange (#f57c00)
 
-## 🔒 Bảo mật
+## 🔒 Security
 
-- Row Level Security (RLS) trên Supabase
+- Row Level Security (RLS) on Supabase
 - Service role authentication
-- Input validation và sanitization
+- Input validation and sanitization
 - CORS middleware
 
-## 📚 Tài liệu thêm
+## 📚 Additional Documentation
 
 - [Backend API README](backend/README.md)
 - [Chrome Extension README](extension/README.md)
@@ -304,27 +315,27 @@ curl -X POST http://localhost:8000/api/v1/predict \
 
 ## 📄 License
 
-Dự án này được phát hành dưới giấy phép MIT.
+This project is released under the MIT License.
 
-## 👥 Tác giả
+## 👥 Authors
 
 - *[Đặng Thị Bích Trâm](https://github.com/jj4002)*
 - *[Đỗ Minh Bảo Huy](https://github.com/ddooxhuy09)*
 - *[Trần Anh Tuấn](https://github.com/tuanhqv123)*
 
-**Học viện Công nghệ Bưu chính Viễn thông (PTIT)**
+**Posts and Telecommunications Institute of Technology (PTIT)**
 
 ## 🙏 Acknowledgments
 
-- PhoBERT team cho Vietnamese BERT model
-- VietOCR team cho OCR tiếng Việt
-- OpenAI Whisper cho STT
-- Supabase cho infrastructure
-- Model được đăng tải trên [HuggingFace](https://huggingface.co/jamus0702/vn_fake_news_v2/tree/main)
+- PhoBERT team for Vietnamese BERT model
+- VietOCR team for Vietnamese OCR
+- OpenAI Whisper for STT
+- Supabase for infrastructure
+- Model published on [HuggingFace](https://huggingface.co/jamus0702/vn_fake_news_v2/tree/main)
 
 ## 📊 Datasets
 
-Dự án sử dụng các datasets sau cho training và evaluation:
+The project uses the following datasets for training and evaluation:
 
-- **[Vietnamese Fake News Detection](https://github.com/hiepnguyenduc2005/Vietnamese-Fake-News-Detection)**: Dataset từ ReINTEL với gần 10,000 examples được gán nhãn, sử dụng cho training baseline models
-- **[VFND Vietnamese Fake News Datasets](https://github.com/WhySchools/VFND-vietnamese-fake-news-datasets)**: Tập hợp các bài báo tiếng Việt và Facebook posts được phân loại (228-254 bài), bao gồm cả Article Contents và Social Contents
+- **[Vietnamese Fake News Detection](https://github.com/hiepnguyenduc2005/Vietnamese-Fake-News-Detection)**: Dataset from ReINTEL with nearly 10,000 labeled examples, used for training baseline models
+- **[VFND Vietnamese Fake News Datasets](https://github.com/WhySchools/VFND-vietnamese-fake-news-datasets)**: Collection of Vietnamese articles and Facebook posts classified (228-254 articles), including both Article Contents and Social Contents

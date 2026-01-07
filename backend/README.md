@@ -1,18 +1,18 @@
 # Backend API Server
 
-FastAPI server cung cấp API để phát hiện tin giả trên TikTok với các tính năng ML/AI tiên tiến và GPU acceleration.
+FastAPI server providing API for fake news detection on TikTok with advanced ML/AI features and GPU acceleration.
 
-## 📋 Tổng quan
+## 📋 Overview
 
-Backend này cung cấp:
-- **Prediction API**: Dự đoán tin giả/thật từ video TikTok
-- **Media Processing**: OCR và Speech-to-Text từ video với GPU support
-- **RAG Verification**: Xác minh với nguồn tin đáng tin cậy
-- **CUDA Detection**: Tự động detect và sử dụng GPU nếu có
-- **Caching**: Lưu kết quả để tối ưu performance
-- **Reporting**: Hệ thống báo cáo để cải thiện model
+This backend provides:
+- **Prediction API**: Predict fake/real news from TikTok videos
+- **Media Processing**: OCR and Speech-to-Text from videos with GPU support
+- **RAG Verification**: Verify with trusted news sources
+- **CUDA Detection**: Automatically detect and use GPU if available
+- **Caching**: Cache results for optimal performance
+- **Reporting**: User reporting system to improve model
 
-## 🏗️ Kiến trúc
+## 🏗️ Architecture
 
 ```
 ┌──────────────┐
@@ -47,7 +47,7 @@ Backend này cung cấp:
 └──────┘ └──────┘ └──────────┘
 ```
 
-## 📁 Cấu trúc thư mục
+## 📁 Directory Structure
 
 ```
 backend/
@@ -63,18 +63,18 @@ backend/
 │   ├── inference.py        # HAN model inference (ONNX + CUDA)
 │   ├── rag_service.py      # RAG verification (GPU)
 │   ├── media_processor.py  # Video/image processing (URL type detection)
-│   ├── ocr_service.py     # OCR service (GPU)
-│   ├── stt_service.py     # Speech-to-Text service (GPU)
-│   └── supabase_client.py # Database client
+│   ├── ocr_service.py      # OCR service (GPU)
+│   ├── stt_service.py      # Speech-to-Text service (GPU)
+│   └── supabase_client.py  # Database client
 │
 └── scripts/                # Utility scripts
     ├── generate_embeddings.py
     └── regenerate_embeddings.py
 ```
 
-## 🚀 Cài đặt
+## 🚀 Installation
 
-### 1. Cài đặt dependencies
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirement.txt
@@ -83,7 +83,7 @@ pip install -r requirement.txt
 **Key dependencies:**
 - `fastapi`: Web framework
 - `uvicorn`: ASGI server
-- `onnxruntime-gpu`: Model inference với CUDA support
+- `onnxruntime-gpu`: Model inference with CUDA support
 - `sentence-transformers`: Embeddings (GPU)
 - `supabase`: Database client
 - `vietocr`: Vietnamese OCR (GPU)
@@ -91,11 +91,11 @@ pip install -r requirement.txt
 - `yt-dlp`: Video download
 - `opencv-python`: Image processing
 - `moviepy`: Audio extraction
-- `torch`: PyTorch cho CUDA detection
+- `torch`: PyTorch for CUDA detection
 
-### 2. Cấu hình Environment Variables
+### 2. Configure Environment Variables
 
-Tạo file `.env`:
+Create `.env` file:
 
 ```env
 # Supabase
@@ -114,27 +114,27 @@ HOST=0.0.0.0
 
 ### 3. Setup Database
 
-Chạy SQL schema từ `extension/database/supabase_schema.sql` trên Supabase.
+Run SQL schema from `extension/database/supabase_schema.sql` on Supabase.
 
-### 4. Chạy server
+### 4. Run Server
 
 ```bash
 python main.py
 ```
 
-Server sẽ tự động detect CUDA khi khởi động:
+Server will automatically detect CUDA on startup:
 ```
 ✅ CUDA Available: NVIDIA GeForce RTX 3050 Ti Laptop GPU
 ✅ CUDA Version: 12.1
 CUDA: ✅ GPU
 ```
 
-Hoặc với uvicorn:
+Or with uvicorn:
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Server sẽ chạy tại: `http://localhost:8000`
+Server will run at: `http://localhost:8000`
 
 API docs: `http://localhost:8000/docs`
 
@@ -163,7 +163,7 @@ GET /health
 
 ### 2. Predict (`/api/v1/predict`)
 
-Dự đoán tin giả/thật từ video TikTok.
+Predict fake/real news from TikTok video.
 
 **Request:**
 ```json
@@ -194,17 +194,17 @@ Dự đoán tin giả/thật từ video TikTok.
 ```
 
 **Prediction Methods:**
-- `cached`: Kết quả từ cache
-- `base_model`: Chỉ dùng HAN model
-- `rag_enhanced`: Có sử dụng RAG verification
+- `cached`: Result from cache
+- `base_model`: HAN model only
+- `rag_enhanced`: RAG verification used
 
 ### 3. Process Media (`/api/v1/process-media`)
 
-Xử lý media với smart routing dựa trên URL type.
+Process media with smart routing based on URL type.
 
 **Flow logic:**
-- URL chứa `/video/` → Chỉ chạy **Whisper (STT)**
-- URL chứa `/photo/` → Chỉ chạy **VietOCR**
+- URL contains `/video/` → Only runs **Whisper (STT)**
+- URL contains `/photo/` → Only runs **VietOCR**
 
 **Request:**
 ```json
@@ -234,9 +234,35 @@ Xử lý media với smart routing dựa trên URL type.
 }
 ```
 
-### 4. Report (`/api/v1/report`)
+### 4. Predict Text (`/api/v1/predict-text`)
 
-Báo cáo kết quả prediction sai.
+Predict from text only (without media processing).
+
+**Request:**
+```json
+{
+  "text": "News article text...",
+  "author_id": "username"
+}
+```
+
+**Response:**
+```json
+{
+  "prediction": "FAKE",
+  "confidence": 0.82,
+  "method": "base_model",
+  "rag_used": false,
+  "probabilities": {
+    "REAL": 0.18,
+    "FAKE": 0.82
+  }
+}
+```
+
+### 5. Report (`/api/v1/report`)
+
+Report incorrect prediction results.
 
 **Request:**
 ```json
@@ -255,89 +281,96 @@ Báo cáo kết quả prediction sai.
 }
 ```
 
-### 5. Get Pending Reports (`/api/v1/reports/pending`)
+### 6. Get Pending Reports (`/api/v1/reports/pending`)
 
-Lấy danh sách reports đang chờ review (admin).
+Get list of pending reports awaiting review (admin).
 
 **Query params:**
-- `limit`: Số lượng reports (default: 50)
+- `limit`: Number of reports (default: 50)
 
-## 🔧 Services Chi tiết
+## 🔧 Service Details
 
 ### Inference Service (`services/inference.py`)
 
 **HANONNXInference Class:**
-- Load ONNX model với CUDA support
+- Load ONNX model with CUDA support
 - Text normalization (Vietnamese)
-- Chunk selection với RAG
+- Chunk selection with RAG
 - Model prediction
 
 **GPU Configuration:**
-- ONNX Runtime: `CUDAExecutionProvider` (nếu có CUDA)
+- ONNX Runtime: `CUDAExecutionProvider` (if CUDA available)
 - SentenceTransformer: `device='cuda'` (auto-detect)
 
 **Methods:**
-- `predict(title, content)`: Dự đoán với HAN model
-- `_select_chunks_with_rag()`: Chọn chunks quan trọng
+- `predict(title, content)`: Predict with HAN model
+- `_select_chunks_with_rag()`: Select important chunks
 
 ### RAG Service (`services/rag_service.py`)
 
 **RAGService Class:**
 - Vector similarity search (GPU)
-- Verification với news corpus
+- Verification with news corpus
 - Confidence adjustment
+- Adaptive threshold calculation
 
 **GPU Configuration:**
 - SentenceTransformer: `device='cuda'` (auto-detect)
 
 **Methods:**
-- `should_use_rag()`: Quyết định có dùng RAG không
-- `verify_with_sources()`: Tìm kiếm và verify
+- `should_use_rag()`: Decide whether to use RAG
+- `verify_with_sources()`: Search and verify
+- `_calculate_adaptive_thresholds()`: Calculate adaptive thresholds based on content length
 
 **RAG Triggers:**
 - High confidence (>0.95)
 - Clickbait patterns
 - Sensitive topics
 - Breaking news keywords
-- Unknown source với high confidence
+- Unknown source with high confidence
+
+**Adaptive Thresholds:**
+- Short text (<250 chars): Lower threshold (0.5 search, 0.6 verify)
+- Long text (>1000 chars): Higher threshold (0.7 search, 0.85 verify)
+- Normal text: Base threshold (0.65 search, 0.80 verify)
 
 ### Media Processor (`services/media_processor.py`)
 
 **MediaProcessor Class:**
-- Download video/image từ TikTok
+- Download video/image from TikTok
 - **Smart URL detection**: Detect `/video/` vs `/photo/`
-- Extract frames cho OCR
-- Extract audio cho STT
+- Extract frames for OCR
+- Extract audio for STT
 
 **Methods:**
 - `detect_tiktok_type(url)`: Detect URL type
-- `download_media()`: Download với yt-dlp
-- `extract_frames()`: Extract frames từ video
+- `download_media()`: Download with yt-dlp
+- `extract_frames()`: Extract frames from video
 - `extract_audio()`: Extract audio track
 
 ### OCR Service (`services/ocr_service.py`)
 
 **OCRService Class:**
-- Sử dụng VietOCR (Vietnamese optimized)
-- Extract text từ frames/images
-- GPU support với CUDA
+- Uses VietOCR (Vietnamese optimized)
+- Extract text from frames/images
+- GPU support with CUDA
 
 **GPU Configuration:**
 - Device: `cuda:0` (auto-detect)
 
 **Methods:**
-- `extract_text_from_frames()`: OCR từ video frames
-- `extract_text_from_image()`: OCR từ image
+- `extract_text_from_frames()`: OCR from video frames
+- `extract_text_from_image()`: OCR from image
 
 ### STT Service (`services/stt_service.py`)
 
 **STTService Class:**
-- Sử dụng OpenAI Whisper (`medium` model)
-- Transcribe audio sang text
-- GPU support với CUDA
+- Uses OpenAI Whisper (`medium` model)
+- Transcribe audio to text
+- GPU support with CUDA
 
 **GPU Configuration:**
-- Model: `medium` (tiết kiệm VRAM)
+- Model: `medium` (VRAM efficient)
 - Device: `cuda` (auto-detect)
 
 **Methods:**
@@ -351,18 +384,18 @@ Lấy danh sách reports đang chờ review (admin).
 - Caching
 
 **Methods:**
-- `get_video()`: Lấy cached prediction
-- `save_video()`: Lưu prediction
+- `get_video()`: Get cached prediction
+- `save_video()`: Save prediction
 - `search_similar_news()`: Vector similarity search
-- `save_report()`: Lưu user report
+- `save_report()`: Save user report
 
 ## 🖥️ GPU Support
 
 ### CUDA Detection
 
-Backend tự động detect CUDA khi khởi động:
-- Kiểm tra PyTorch CUDA availability
-- Kiểm tra ONNX Runtime CUDA providers
+Backend automatically detects CUDA on startup:
+- Check PyTorch CUDA availability
+- Check ONNX Runtime CUDA providers
 - Log GPU information
 
 ### GPU Services
@@ -377,14 +410,14 @@ Backend tự động detect CUDA khi khởi động:
 
 ### Fallback
 
-Nếu không có CUDA, tất cả services tự động fallback về CPU.
+If CUDA is not available, all services automatically fallback to CPU.
 
 ## 🧪 Testing
 
-### Test với curl
+### Test with curl
 
 ```bash
-# Health check với CUDA info
+# Health check with CUDA info
 curl http://localhost:8000/health
 
 # Predict
@@ -397,7 +430,7 @@ curl -X POST http://localhost:8000/api/v1/predict \
   }'
 ```
 
-### Test với Python
+### Test with Python
 
 ```python
 import requests
@@ -415,75 +448,75 @@ print(response.json())
 
 ## 📊 Performance
 
-### Benchmarks (với GPU)
+### Benchmarks (with GPU)
 
-- **Prediction (no cache)**: ~1-3 giây
+- **Prediction (no cache)**: ~1-3 seconds
 - **Prediction (cached)**: <100ms
 - **Media processing**:
-  - Video (STT): ~3-5 giây (GPU)
-  - Photo (OCR): ~2-4 giây (GPU)
+  - Video (STT): ~3-5 seconds (GPU)
+  - Photo (OCR): ~2-4 seconds (GPU)
 - **RAG search**: ~500ms-1s (GPU)
 
 ### Optimization
 
-1. **GPU Acceleration**: Tất cả ML services dùng GPU
-2. **Caching**: Kết quả được cache trong database
+1. **GPU Acceleration**: All ML services use GPU
+2. **Caching**: Results cached in database
 3. **Smart Routing**: Video → STT, Photo → OCR
 4. **Async operations**: FastAPI async support
-5. **Model optimization**: ONNX Runtime cho inference nhanh
+5. **Model optimization**: ONNX Runtime for fast inference
 
 ## 🐛 Troubleshooting
 
-### CUDA không detect được
+### CUDA not detected
 
-**Vấn đề:** `CUDA: ❌ CPU only` trong logs
-- **Giải pháp:** 
-  - Kiểm tra NVIDIA driver: `nvidia-smi`
-  - Kiểm tra PyTorch CUDA: `python -c "import torch; print(torch.cuda.is_available())"`
-  - Cài đặt `onnxruntime-gpu` thay vì `onnxruntime`
+**Issue:** `CUDA: ❌ CPU only` in logs
+- **Solution:** 
+  - Check NVIDIA driver: `nvidia-smi`
+  - Check PyTorch CUDA: `python -c "import torch; print(torch.cuda.is_available())"`
+  - Install `onnxruntime-gpu` instead of `onnxruntime`
 
-### Model không load
+### Model not loading
 
-**Vấn đề:** `FileNotFoundError: Model not found`
-- **Giải pháp:** Kiểm tra `MODEL_PATH` trong `.env`
+**Issue:** `FileNotFoundError: Model not found`
+- **Solution:** Check `MODEL_PATH` in `.env`
 
 ### Database connection failed
 
-**Vấn đề:** `Supabase connection failed`
-- **Giải pháp:** Kiểm tra `SUPABASE_URL` và `SUPABASE_KEY`
+**Issue:** `Supabase connection failed`
+- **Solution:** Check `SUPABASE_URL` and `SUPABASE_KEY`
 
-### OCR/STT không hoạt động
+### OCR/STT not working
 
-**Vấn đề:** `VietOCR/Whisper not available`
-- **Giải pháp:** 
-  - Cài đặt dependencies: `pip install vietocr openai-whisper`
-  - Kiểm tra FFmpeg đã cài đặt
+**Issue:** `VietOCR/Whisper not available`
+- **Solution:** 
+  - Install dependencies: `pip install vietocr openai-whisper`
+  - Check FFmpeg is installed
 
 ### Memory issues (GPU)
 
-**Vấn đề:** Out of memory khi process media
-- **Giải pháp:**
-  - Services chạy tuần tự nên không lo hết VRAM
-  - Nếu vẫn lỗi, có thể giảm model size (Whisper: `medium` → `base`)
+**Issue:** Out of memory when processing media
+- **Solution:**
+  - Services run sequentially so no VRAM overflow
+  - If still error, reduce model size (Whisper: `medium` → `base`)
 
 ## 🔒 Security
 
-- **CORS**: Configured cho extension origin
+- **CORS**: Configured for extension origin
 - **Input validation**: Pydantic models
-- **SQL injection**: Supabase client tự động escape
-- **RLS**: Row Level Security trên database
+- **SQL injection**: Supabase client auto-escapes
+- **RLS**: Row Level Security on database
 
 ## 📈 Monitoring
 
 ### Logging
 
-Server sử dụng Python logging:
+Server uses Python logging:
 - Level: INFO
 - Format: Timestamp, level, message
 - Output: Console
-- CUDA info được log khi khởi động
+- CUDA info logged on startup
 
-### Metrics (có thể thêm)
+### Metrics (can be added)
 
 - Request count
 - Response time
@@ -493,7 +526,7 @@ Server sử dụng Python logging:
 
 ## 🔮 Future Improvements
 
-- [ ] WebSocket support cho real-time updates
+- [ ] WebSocket support for real-time updates
 - [ ] Batch prediction API
 - [ ] Model versioning
 - [ ] A/B testing framework

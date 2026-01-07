@@ -1,15 +1,15 @@
 # Model Training & Experiments
 
-Thư mục chứa các script và notebook để train và experiment với nhiều kiến trúc model khác nhau cho fake news detection trên TikTok.
+Directory containing scripts and notebooks to train and experiment with different model architectures for fake news detection on TikTok.
 
-## 📋 Tổng quan
+## 📋 Overview
 
-Dự án này bao gồm **4 experiments chính** với các approaches khác nhau:
+This project includes **4 main experiments** with different approaches:
 
-1. **Baseline PhoBERT** (`train-baseline-phobert.py`) - Sequence Classification đơn giản
-2. **PhoBERT + Author Embedding** (`train-author-embedding.py`) - Multi-modal với author information
-3. **Prompt-based MLM** (`train-MLM_Prompt.py`) - Masked Language Modeling với prompts
-4. **HAN + RAG** (`train-rag-han.ipynb`) - Hierarchical Attention Network với RAG (Production)
+1. **Baseline PhoBERT** (`train-baseline-phobert.py`) - Simple Sequence Classification
+2. **PhoBERT + Author Embedding** (`train-author-embedding.py`) - Multi-modal with author information
+3. **Prompt-based MLM** (`train-MLM_Prompt.py`) - Masked Language Modeling with prompts
+4. **HAN + RAG** (`RAG_HAN_v4.ipynb`) - Hierarchical Attention Network with RAG (Production)
 
 ## 📁 Files
 
@@ -18,16 +18,18 @@ train/
 ├── train-baseline-phobert.py    # Experiment 1: Baseline PhoBERT
 ├── train-author-embedding.py    # Experiment 2: PhoBERT + Author Embedding
 ├── train-MLM_Prompt.py          # Experiment 3: Prompt-based MLM
-└── train-rag-han.ipynb          # Experiment 4: HAN + RAG (Production)
+├── RAG_HAN_v3.ipynb              # Experiment 4: HAN + RAG (v3)
+├── RAG_HAN_v4.ipynb              # Experiment 4: HAN + RAG (v4 - Production)
+└── RAG_HAN_v4_1.ipynb            # Experiment 4: HAN + RAG (v4.1)
 ```
 
 ## 🔬 Experiments Overview
 
 ### Experiment 1: Baseline PhoBERT (`train-baseline-phobert.py`)
 
-**Mục đích:** Baseline đơn giản với PhoBERT sequence classification
+**Purpose:** Simple baseline with PhoBERT sequence classification
 
-**Kiến trúc:**
+**Architecture:**
 - **Model**: `RobertaForSequenceClassification`
 - **Input**: Text only (title + content)
 - **Output**: Binary classification (REAL/FAKE)
@@ -40,56 +42,56 @@ train/
 - Optimizer: AdamW
 - Loss: CrossEntropyLoss
 
-**Kết quả:** Baseline performance để so sánh với các models khác
+**Results:** Baseline performance for comparison with other models
 
 ---
 
 ### Experiment 2: PhoBERT + Author Embedding (`train-author-embedding.py`)
 
-**Mục đích:** Tận dụng thông tin author để cải thiện accuracy
+**Purpose:** Leverage author information to improve accuracy
 
-**Kiến trúc:**
+**Architecture:**
 - **Backbone**: PhoBERT-base-v2
-- **Author Embedding**: Embedding layer cho từng author
-- **Adaptive Gating**: Tự động học khi nào tin author, khi nào chỉ dùng text
+- **Author Embedding**: Embedding layer for each author
+- **Adaptive Gating**: Automatically learn when to trust author, when to use text only
 - **Dual Branch**: 
-  - Text-only branch (cho unknown authors)
+  - Text-only branch (for unknown authors)
   - Combined branch (text + author embedding)
 
 **Features:**
-- Author encoding với LabelEncoder
-- Gating mechanism để điều chỉnh importance của author
-- Weighted Focal Loss với label smoothing
+- Author encoding with LabelEncoder
+- Gating mechanism to adjust author importance
+- Weighted Focal Loss with label smoothing
 - Mixed precision training (FP16)
 
 **Hyperparameters:**
-- Learning rate: 2e-5 (different rates cho từng component)
+- Learning rate: 2e-5 (different rates for each component)
 - Batch size: 16
 - Epochs: 8
 - Author embedding dim: 64
 - Dropout: 0.3
 - Focal loss: alpha=0.7, gamma=2
 
-**Kết quả:** Cải thiện đáng kể khi có author information
+**Results:** Significant improvement when author information available
 
 ---
 
 ### Experiment 3: Prompt-based MLM (`train-MLM_Prompt.py`)
 
-**Mục đích:** Fine-tune PhoBERT với Masked Language Modeling và prompt engineering
+**Purpose:** Fine-tune PhoBERT with Masked Language Modeling and prompt engineering
 
-**Kiến trúc:**
+**Architecture:**
 - **Model**: `AutoModelForMaskedLM` (PhoBERT MLM)
 - **Prompt Format**: `"Bài viết này là <mask> . Tiêu_đề : {title} . Nội_dung : {content}"`
 - **Verbalizer**: 
   - Label 0 (REAL) → token "thật"
   - Label 1 (FAKE) → token "giả"
-- **Training**: Predict token tại vị trí `<mask>`
+- **Training**: Predict token at `<mask>` position
 
 **Features:**
-- Vietnamese text normalizer (không cần vinorm)
+- Vietnamese text normalizer (no vinorm needed)
 - Teencode handling
-- Word segmentation với underthesea
+- Word segmentation with underthesea
 - Class-weighted loss
 - Gradient accumulation
 
@@ -101,28 +103,28 @@ train/
 - Max length: 256 tokens
 - Warmup: 10% of total steps
 
-**Kết quả:** Tận dụng pre-trained knowledge tốt hơn với prompt
+**Results:** Better leverage of pre-trained knowledge with prompts
 
 ---
 
-### Experiment 4: HAN + RAG (`train-rag-han.ipynb`) ⭐ **PRODUCTION**
+### Experiment 4: HAN + RAG (`RAG_HAN_v4.ipynb`) ⭐ **PRODUCTION**
 
-**Mục đích:** Hierarchical Attention Network với RAG verification (model được sử dụng trong production)
+**Purpose:** Hierarchical Attention Network with RAG verification (model used in production)
 
-**Kiến trúc:**
+**Architecture:**
 - **HAN Model**: 
-  - Chunk content thành segments
-  - RAG-based chunk selection (top-k chunks dựa trên title similarity)
+  - Chunk content into segments
+  - RAG-based chunk selection (top-k chunks based on title similarity)
   - Hierarchical attention (chunk-level → document-level)
 - **RAG Integration**:
-  - Vector search trong news corpus
-  - Similarity threshold: 0.75
-  - Confidence adjustment dựa trên matching articles
+  - Vector search in news corpus
+  - Adaptive similarity threshold (0.5-0.7 for search, 0.6-0.85 for verification)
+  - Confidence adjustment based on matching articles
 
 **Features:**
-- Text normalization giống training
-- Semantic chunk retriever với SentenceTransformer
-- ONNX export cho production
+- Text normalization same as training
+- Semantic chunk retriever with SentenceTransformer
+- ONNX export for production
 - Cache mechanism
 
 **Hyperparameters:**
@@ -133,11 +135,16 @@ train/
 - Chunk size: 400 chars
 - Top-k chunks: 5
 
-**Kết quả:** Best performance với RAG verification, được deploy trong production
+**Results:** Best performance with RAG verification, deployed in production
+
+**Versions:**
+- `RAG_HAN_v3.ipynb`: Initial HAN + RAG implementation
+- `RAG_HAN_v4.ipynb`: Production version with adaptive thresholds
+- `RAG_HAN_v4_1.ipynb`: Refined version with improvements
 
 ---
 
-## 📊 So sánh Experiments
+## 📊 Experiment Comparison
 
 | Experiment | Model | Input Features | Complexity | Performance | Use Case |
 |------------|-------|----------------|------------|-------------|----------|
@@ -146,31 +153,31 @@ train/
 | 3. Prompt MLM | PhoBERT MLM | Text + Prompt | Medium | Good | Leverage pre-trained knowledge |
 | 4. HAN + RAG | HAN + RAG | Text + Chunks | High | **Best** | **Production** |
 
-## 🚀 Training Pipeline (Chung cho tất cả experiments)
+## 🚀 Training Pipeline (Common for all experiments)
 
 ### 1. Data Preparation
 
 **Input:**
-- Dataset từ `crawl/` folder
-- Format: CSV với columns `title`, `content` (hoặc `text`), `label`
-- Optional: `author_id` (cho Experiment 2)
+- Dataset from `crawl/` folder or `dataset/` folder
+- Format: CSV with columns `title`, `content` (or `text`), `label`
+- Optional: `author_id` (for Experiment 2)
 
 **Preprocessing:**
 - Text normalization (Vietnamese)
-- Word segmentation với underthesea
-- Chunking content thành segments (cho HAN)
+- Word segmentation with underthesea
+- Chunking content into segments (for HAN)
 - Train/val/test split (stratified)
 
 ### 2. Training Process
 
 **Common steps:**
-1. Load và preprocess data
-2. Initialize model và tokenizer
+1. Load and preprocess data
+2. Initialize model and tokenizer
 3. Create DataLoaders
-4. Setup optimizer và scheduler
-5. Train với validation
-6. Evaluate trên test set
-7. Export model (ONNX cho production)
+4. Setup optimizer and scheduler
+5. Train with validation
+6. Evaluate on test set
+7. Export model (ONNX for production)
 
 ### 3. Evaluation Metrics
 
@@ -220,9 +227,9 @@ python train-author-embedding.py
 ```
 
 **Input files:**
-- `final_train_stratified.csv` - Training với author_id
-- `final_val_stratified.csv` - Validation với author_id
-- `final_test_stratified.csv` - Test với author_id
+- `final_train_stratified.csv` - Training with author_id
+- `final_val_stratified.csv` - Validation with author_id
+- `final_test_stratified.csv` - Test with author_id
 
 **Output:**
 - `phobert_for_onnx/best_model_weights.pt` - Model weights
@@ -237,7 +244,7 @@ python train-MLM_Prompt.py
 ```
 
 **Input:**
-- Merged dataset với `title`, `text`, `label` columns
+- Merged dataset with `title`, `text`, `label` columns
 
 **Output:**
 - Trained MLM model
@@ -245,12 +252,12 @@ python train-MLM_Prompt.py
 
 #### Experiment 4: HAN + RAG (Production)
 
-1. Mở notebook: `train-rag-han.ipynb`
-2. Cấu hình paths:
+1. Open notebook: `RAG_HAN_v4.ipynb`
+2. Configure paths:
    - Dataset path
    - Model save path
    - Output path
-3. Chạy cells theo thứ tự
+3. Run cells in order
 
 **Export to ONNX:**
 
@@ -271,7 +278,7 @@ torch.onnx.export(
 
 ## 🔧 Configuration
 
-### Data Paths (Tùy theo experiment)
+### Data Paths (Varies by experiment)
 
 **Experiment 1:**
 ```python
@@ -289,12 +296,12 @@ TEST_CSV = "final_test_stratified.csv"
 
 **Experiment 4 (HAN):**
 ```python
-TRAIN_CSV = "../crawl/fake_all.csv"
+TRAIN_CSV = "../dataset/final_dataset_for_training.csv"
 VAL_CSV = "../crawl/val_data.csv"
 TEST_CSV = "../crawl/test_data.csv"
 ```
 
-### Model Config (Chung)
+### Model Config (Common)
 
 ```python
 MODEL_NAME = "vinai/phobert-base-v2"
@@ -315,18 +322,18 @@ AUTHOR_EMBED_DIM = 64
 DROPOUT_RATE = 0.3
 ```
 
-### Training Config (Chung)
+### Training Config (Common)
 
 ```python
 BATCH_SIZE = 16
 LEARNING_RATE = 2e-5
-NUM_EPOCHS = 5-8  # Tùy experiment
+NUM_EPOCHS = 5-8  # Varies by experiment
 WARMUP_RATIO = 0.1
 WEIGHT_DECAY = 0.01-0.02
 ```
 
 **Experiment-specific:**
-- **Exp 2**: Different learning rates cho từng component
+- **Exp 2**: Different learning rates for each component
 - **Exp 3**: Gradient accumulation = 2
 - **Exp 4**: Chunk-based processing
 
@@ -334,21 +341,21 @@ WEIGHT_DECAY = 0.01-0.02
 
 ### Format
 
-CSV với columns:
+CSV with columns:
 - `title`: Video caption/title
-- `content`: OCR + STT text (hoặc chỉ caption nếu không có)
-- `label`: `FAKE` hoặc `REAL`
+- `content`: OCR + STT text (or just caption if not available)
+- `label`: `FAKE` or `REAL`
 
 ### Size Recommendations
 
-- **Minimum**: 1000 samples mỗi class
-- **Recommended**: 5000+ samples mỗi class
-- **Ideal**: 10000+ samples mỗi class
+- **Minimum**: 1000 samples per class
+- **Recommended**: 5000+ samples per class
+- **Ideal**: 10000+ samples per class
 
 ### Data Balance
 
-- Cân bằng giữa FAKE và REAL
-- Nếu không cân bằng, sử dụng class weights
+- Balance between FAKE and REAL
+- If imbalanced, use class weights
 
 ## 🧪 Evaluation
 
@@ -364,24 +371,24 @@ f1 = 2 * (precision * recall) / (precision + recall)
 
 ### Validation
 
-- Validation trên held-out set
-- Early stopping nếu validation loss không giảm
-- Save best model dựa trên F1-score
+- Validate on held-out set
+- Early stopping if validation loss doesn't decrease
+- Save best model based on F1-score
 
 ## 🐛 Troubleshooting
 
 ### Out of Memory
 
-**Vấn đề:** CUDA out of memory
-- **Giải pháp:**
-  - Giảm batch size
-  - Giảm max_length
-  - Sử dụng gradient accumulation
+**Issue:** CUDA out of memory
+- **Solution:**
+  - Reduce batch size
+  - Reduce max_length
+  - Use gradient accumulation
 
-### Training không converge
+### Training not converging
 
-**Vấn đề:** Loss không giảm
-- **Giải pháp:**
+**Issue:** Loss not decreasing
+- **Solution:**
   - Check learning rate
   - Check data quality
   - Try different optimizers
@@ -389,8 +396,8 @@ f1 = 2 * (precision * recall) / (precision + recall)
 
 ### Overfitting
 
-**Vấn đề:** Train accuracy cao nhưng val thấp
-- **Giải pháp:**
+**Issue:** Train accuracy high but val low
+- **Solution:**
   - Add dropout
   - Increase weight decay
   - Add more data
@@ -398,27 +405,27 @@ f1 = 2 * (precision * recall) / (precision + recall)
 
 ## 📈 Best Practices
 
-1. **Data Quality**: Clean và validate data kỹ
-2. **Cross-validation**: Sử dụng k-fold nếu dataset nhỏ
-3. **Hyperparameter tuning**: Grid search hoặc random search
-4. **Model checkpointing**: Save model mỗi epoch
-5. **Logging**: Log metrics và losses
+1. **Data Quality**: Clean and validate data thoroughly
+2. **Cross-validation**: Use k-fold if dataset is small
+3. **Hyperparameter tuning**: Grid search or random search
+4. **Model checkpointing**: Save model each epoch
+5. **Logging**: Log metrics and losses
 6. **Reproducibility**: Set random seeds
 
 ## 🔒 Model Security
 
-- **Model validation**: Test model trên edge cases
-- **Bias checking**: Check bias trên different groups
-- **Adversarial testing**: Test với adversarial examples
+- **Model validation**: Test model on edge cases
+- **Bias checking**: Check bias on different groups
+- **Adversarial testing**: Test with adversarial examples
 
 ## 🔮 Future Improvements
 
 - [ ] Multi-task learning
-- [ ] Transfer learning từ models khác
+- [ ] Transfer learning from other models
 - [ ] Ensemble methods
-- [ ] Hyperparameter optimization với Optuna
+- [ ] Hyperparameter optimization with Optuna
 - [ ] Model distillation
-- [ ] Quantization cho mobile deployment
+- [ ] Quantization for mobile deployment
 
 ## 📚 References
 
@@ -437,10 +444,9 @@ f1 = 2 * (precision * recall) / (precision + recall)
 
 ### Datasets
 
-- **[Vietnamese Fake News Detection](https://github.com/hiepnguyenduc2005/Vietnamese-Fake-News-Detection)**: Dataset từ ReINTEL với gần 10,000 examples được gán nhãn. Dataset này được sử dụng chính cho training baseline models và các experiments.
-- **[VFND Vietnamese Fake News Datasets](https://github.com/WhySchools/VFND-vietnamese-fake-news-datasets)**: Tập hợp các bài báo tiếng Việt và Facebook posts được phân loại (228-254 bài), bao gồm cả Article Contents và Social Contents. Dataset này được sử dụng để bổ sung và đa dạng hóa training data.
+- **[Vietnamese Fake News Detection](https://github.com/hiepnguyenduc2005/Vietnamese-Fake-News-Detection)**: Dataset from ReINTEL with nearly 10,000 labeled examples. This dataset is primarily used for training baseline models and experiments.
+- **[VFND Vietnamese Fake News Datasets](https://github.com/WhySchools/VFND-vietnamese-fake-news-datasets)**: Collection of Vietnamese articles and Facebook posts classified (228-254 articles), including both Article Contents and Social Contents. This dataset is used to supplement and diversify training data.
 
 ## 📄 License
 
 MIT License
-

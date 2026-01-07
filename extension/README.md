@@ -1,20 +1,20 @@
 # Chrome Extension - Kiểm Tin Giả - PTIT
 
-Extension trình duyệt Chrome/Edge để phát hiện tin giả trên TikTok trực tiếp trên trang web. Extension được phát triển bởi Học viện Công nghệ Bưu chính Viễn thông (PTIT).
+Chrome/Edge browser extension to detect fake news on TikTok directly on the website. Extension developed by Posts and Telecommunications Institute of Technology (PTIT).
 
-## 📋 Tổng quan
+## 📋 Overview
 
-Extension này cho phép người dùng:
-- Phân tích video TikTok ngay trên trang web
-- Xem kết quả dự đoán tin giả/thật trong popup
-- Báo cáo kết quả sai để cải thiện model
-- Giao diện đơn giản với branding PTIT
+This extension allows users to:
+- Analyze TikTok videos directly on the website
+- View fake/real prediction results in popup
+- Report incorrect results to improve model
+- Simple interface with PTIT branding
 
-## 🏗️ Kiến trúc
+## 🏗️ Architecture
 
 ```
 ┌─────────────┐
-│   Popup     │  ← UI hiển thị kết quả (PTIT branding)
+│   Popup     │  ← UI displaying results (PTIT branding)
 │  (popup/)   │
 └──────┬──────┘
        │
@@ -28,16 +28,16 @@ Extension này cho phép người dùng:
        │ chrome.tabs.sendMessage
        ▼
 ┌─────────────┐
-│  Content    │  ← Inject vào TikTok page
+│  Content    │  ← Injected into TikTok page
 │ (content/)  │
 └──────┬──────┘
        │
-       │ Scrape data từ DOM
+       │ Scrape data from DOM
        ▼
    TikTok Page
 ```
 
-## 📁 Cấu trúc thư mục
+## 📁 Directory Structure
 
 ```
 extension/
@@ -46,7 +46,7 @@ extension/
 │   └── background.js      # Service worker
 ├── content/
 │   ├── content.js         # Content script (scraping)
-│   └── content.css        # Styles cho injected UI
+│   └── content.css        # Styles for injected UI
 ├── popup/
 │   ├── popup.html         # Popup UI (PTIT branding)
 │   ├── popup.js           # Popup logic
@@ -55,63 +55,64 @@ extension/
 │   └── logo-ptit.png      # PTIT logo
 ├── database/              # Database schema
 │   └── supabase_schema.sql
-├── model-loader.js        # ONNX model loader (optional)
-├── tokenizer.js           # Tokenizer (optional)
-└── package.json           # Dependencies
+├── package.json           # Dependencies
+└── node_modules/          # npm packages
 ```
 
-## 🚀 Cài đặt
+## 🚀 Installation
 
-### 1. Cài đặt dependencies
+### 1. Install Dependencies
 
 ```bash
 npm install
 ```
 
 Dependencies:
-- `@huggingface/tokenizers`: Tokenizer cho Vietnamese text
-- `onnxruntime-web`: ONNX Runtime cho browser (optional)
+- `@huggingface/tokenizers`: Tokenizer for Vietnamese text
+- `onnxruntime-web`: ONNX Runtime for browser (optional)
 
-### 2. Load Extension vào Chrome
+### 2. Load Extension into Chrome
 
-1. Mở Chrome và vào `chrome://extensions/`
-2. Bật **Developer mode** (góc trên bên phải)
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable **Developer mode** (top right corner)
 3. Click **Load unpacked**
-4. Chọn thư mục `extension/`
-5. Extension sẽ xuất hiện với tên **"Kiểm Tin Giả - PTIT"**
+4. Select `extension/` folder
+5. Extension will appear as **"Kiểm Tin Giả - PTIT"**
 
-### 3. Cấu hình API URL
+### 3. Configure API URL
 
-Mặc định extension kết nối đến `http://localhost:8000`. Để thay đổi:
+By default, extension connects to `http://localhost:8000`. To change:
 
-1. Mở `popup/popup.js`
-2. Sửa `API_BASE_URL`:
+1. Open `popup/popup.js`
+2. Edit `API_BASE_URL`:
 ```javascript
 const API_BASE_URL = 'http://your-api-url:8000/api/v1';
 ```
 
-## 📝 Chi tiết các thành phần
+## 📝 Component Details
 
 ### manifest.json
 
-Extension manifest version 3 với các permissions:
-- `activeTab`: Truy cập tab hiện tại
-- `storage`: Lưu trữ local
+Extension manifest version 3 with permissions:
+- `activeTab`: Access current tab
+- `storage`: Local storage
 - `scripting`: Inject scripts
+- `contextMenus`: Context menu support
 - Host permissions: `https://www.tiktok.com/*`, `http://localhost:8000/*`
 
 **Extension name:** "Kiểm Tin Giả - PTIT"
+**Version:** 2.2.2
 
 ### Content Script (`content/content.js`)
 
-**Chức năng:**
-- Scrape dữ liệu từ TikTok page
-- Lắng nghe URL changes (TikTok SPA)
-- Trả về video data khi popup request
+**Functions:**
+- Scrape data from TikTok page
+- Listen for URL changes (TikTok SPA)
+- Return video data when popup requests
 
 **Data extraction methods:**
-1. **SIGI_STATE** (Priority): Parse từ `<script id="SIGI_STATE">`
-2. **UNIVERSAL_DATA**: Parse từ `__UNIVERSAL_DATA_FOR_REHYDRATION__`
+1. **SIGI_STATE** (Priority): Parse from `<script id="SIGI_STATE">`
+2. **UNIVERSAL_DATA**: Parse from `__UNIVERSAL_DATA_FOR_REHYDRATION__`
 3. **DOM scraping** (Fallback): Query DOM elements
 
 **Data structure:**
@@ -127,39 +128,40 @@ Extension manifest version 3 với các permissions:
 ### Popup (`popup/popup.html`, `popup/popup.js`)
 
 **UI Design:**
-- **Theme**: Light theme với nền trắng, viền đen
-- **Logo**: PTIT logo ở góc trái trên
-- **Tên**: "Kiểm Tin Giả"
+- **Theme**: Light theme with white background, black border
+- **Logo**: PTIT logo at top left
+- **Name**: "Kiểm Tin Giả"
 - **Subtitle**: "Phát hiện tin giả TikTok bằng AI"
 
-**Chức năng:**
-- UI để trigger phân tích
-- Gọi API backend
-- Hiển thị kết quả với styling
+**Functions:**
+- UI to trigger analysis
+- Call backend API
+- Display results with styling
 
 **Flow:**
-1. User click "Phân tích video"
-2. Check nếu đang ở TikTok page
-3. Inject content script nếu cần
-4. Lấy video data từ content script
-5. Gọi `/api/v1/process-media` (OCR hoặc STT tùy URL type)
-6. Gọi `/api/v1/predict` (prediction)
-7. Hiển thị kết quả
+1. User clicks "Phân tích video"
+2. Check if on TikTok page
+3. Inject content script if needed
+4. Get video data from content script
+5. Call `/api/v1/process-media` (OCR or STT depending on URL type)
+6. Call `/api/v1/predict` (prediction)
+7. Display results
 
 **UI States:**
-- Loading: Hiển thị spinner
-- Success: Hiển thị prediction + confidence
+- Loading: Display spinner
+- Success: Display prediction + confidence
   - 🟢 REAL: Green (#2e7d32)
   - 🔴 FAKE: Red (#d32f2f)
   - ⚪ UNCERTAIN: Orange (#f57c00)
-- Error: Hiển thị error message
+- Error: Display error message
 
 ### Background Script (`background/background.js`)
 
-**Chức năng:**
+**Functions:**
 - Service worker (Manifest v3)
-- Message routing giữa popup và content script
-- Hiện tại đơn giản, có thể mở rộng cho offline support
+- Message routing between popup and content script
+- Context menu setup
+- Currently simple, can be extended for offline support
 
 ## 🎨 UI/UX
 
@@ -172,11 +174,11 @@ Extension manifest version 3 với các permissions:
 - Button: Red PTIT color (#d32f2f)
 
 **Layout:**
-- Header với PTIT logo (48x48px) và title
+- Header with PTIT logo (48x48px) and title
 - Analyze button (full width)
-- Result area với confidence bar
-- Report button (hiện khi có result)
-- Footer với PTIT credit và version
+- Result area with confidence bar
+- Report button (shown when result available)
+- Footer with PTIT credit and version
 
 **Color Coding:**
 - 🟢 REAL: Green (#2e7d32)
@@ -194,104 +196,105 @@ Extension manifest version 3 với các permissions:
 ### Debugging
 
 **Content Script:**
-- Mở DevTools trên TikTok page
-- Console sẽ hiển thị logs từ content script
+- Open DevTools on TikTok page
+- Console will display logs from content script
 
 **Popup:**
 - Right-click extension icon → "Inspect popup"
-- DevTools sẽ mở cho popup window
+- DevTools will open for popup window
 
 **Background:**
-- Vào `chrome://extensions/`
-- Click "service worker" link dưới extension
+- Go to `chrome://extensions/`
+- Click "service worker" link under extension
 
 ### Testing
 
-1. Mở TikTok page: `https://www.tiktok.com/@user/video/123`
+1. Open TikTok page: `https://www.tiktok.com/@user/video/123`
 2. Click extension icon
 3. Click "Phân tích video"
-4. Kiểm tra console logs và network requests
+4. Check console logs and network requests
 
 ## 🐛 Troubleshooting
 
-### Extension không hoạt động
+### Extension not working
 
-**Vấn đề:** Content script không inject
-- **Giải pháp:** Reload TikTok page (F5)
+**Issue:** Content script not injecting
+- **Solution:** Reload TikTok page (F5)
 
-**Vấn đề:** Không lấy được video data
-- **Giải pháp:** TikTok có thể đã thay đổi DOM structure, cần update selectors
+**Issue:** Cannot get video data
+- **Solution:** TikTok may have changed DOM structure, need to update selectors
 
-**Vấn đề:** API connection failed
-- **Giải pháp:** 
-  - Kiểm tra backend server đang chạy
-  - Kiểm tra CORS settings
-  - Kiểm tra API_BASE_URL trong popup.js
+**Issue:** API connection failed
+- **Solution:** 
+  - Check backend server is running
+  - Check CORS settings
+  - Check API_BASE_URL in popup.js
 
-### Logo không hiển thị
+### Logo not displaying
 
-**Vấn đề:** PTIT logo không load
-- **Giải pháp:**
-  - Kiểm tra file `icons/logo-ptit.png` tồn tại
-  - Kiểm tra path trong `popup.html`: `../icons/logo-ptit.png`
+**Issue:** PTIT logo not loading
+- **Solution:**
+  - Check file `icons/logo-ptit.png` exists
+  - Check path in `popup.html`: `../icons/logo-ptit.png`
   - Reload extension
 
-### Scraping không chính xác
+### Scraping not accurate
 
-TikTok thường xuyên thay đổi DOM structure. Nếu scraping fail:
+TikTok frequently changes DOM structure. If scraping fails:
 
-1. Check console logs trong DevTools
-2. Inspect DOM structure của TikTok page
-3. Update selectors trong `content.js`
+1. Check console logs in DevTools
+2. Inspect DOM structure of TikTok page
+3. Update selectors in `content.js`
 
 ## 📦 Build & Deploy
 
 ### Development
 ```bash
-# Chỉ cần load unpacked trong Chrome
-# Không cần build step
+# Just load unpacked in Chrome
+# No build step needed
 ```
 
-### Production (nếu cần minify)
+### Production (if minification needed)
 ```bash
-# Có thể dùng webpack/rollup để bundle
+# Can use webpack/rollup to bundle
 npm run build
 ```
 
 ### Publish to Chrome Web Store
 
-1. Tạo ZIP file:
+1. Create ZIP file:
 ```bash
 zip -r extension.zip . -x "node_modules/*" "*.md" ".git/*"
 ```
 
-2. Upload lên Chrome Web Store Developer Dashboard
-3. Điền thông tin và submit for review
+2. Upload to Chrome Web Store Developer Dashboard
+3. Fill information and submit for review
 
 ## 🔒 Permissions
 
-Extension chỉ request permissions cần thiết:
-- `activeTab`: Chỉ khi user click extension
-- `storage`: Lưu user preferences (future)
+Extension only requests necessary permissions:
+- `activeTab`: Only when user clicks extension
+- `storage`: Store user preferences (future)
 - `scripting`: Inject content script
-- Host: Chỉ TikTok và localhost API
+- `contextMenus`: Context menu support
+- Host: Only TikTok and localhost API
 
 ## 📚 API Integration
 
-Extension giao tiếp với backend qua REST API:
+Extension communicates with backend via REST API:
 
-### Endpoints sử dụng:
-- `POST /api/v1/process-media`: Xử lý OCR hoặc STT (tùy URL type)
+### Endpoints used:
+- `POST /api/v1/process-media`: Process OCR or STT (depending on URL type)
   - Video URL (`/video/`) → STT only
   - Photo URL (`/photo/`) → OCR only
-- `POST /api/v1/predict`: Dự đoán tin giả/thật
-- `POST /api/v1/report`: Báo cáo kết quả sai
+- `POST /api/v1/predict`: Predict fake/real news
+- `POST /api/v1/report`: Report incorrect results
 
-Xem chi tiết trong [backend/README.md](../backend/README.md)
+See details in [backend/README.md](../backend/README.md)
 
 ## 📊 Media Processing Flow
 
-Backend tự động detect URL type và chọn phương pháp xử lý:
+Backend automatically detects URL type and selects processing method:
 
 ```
 ┌──────────────┐
@@ -320,8 +323,8 @@ Backend tự động detect URL type và chọn phương pháp xử lý:
 
 ## 🔮 Future Improvements
 
-- [ ] Offline mode với ONNX Runtime Web
-- [ ] History của predictions
+- [ ] Offline mode with ONNX Runtime Web
+- [ ] Prediction history
 - [ ] Settings page
 - [ ] Batch analysis
 - [ ] Export results
@@ -334,6 +337,6 @@ MIT License
 
 ## 👥 Credits
 
-**Học viện Công nghệ Bưu chính Viễn thông (PTIT)**
+**Posts and Telecommunications Institute of Technology (PTIT)**
 
-Extension này được phát triển như một phần của dự án nghiên cứu về phát hiện tin giả trên mạng xã hội.
+This extension is developed as part of a research project on fake news detection on social media.
