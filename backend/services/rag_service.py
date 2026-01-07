@@ -114,12 +114,7 @@ class QueryGenerator:
         title: str,
         content: str,
     ) -> List[Tuple[str, float]]:
-        """
-        Generate multiple queries with weights.
 
-        Returns:
-            List of (query_text, weight) tuples.
-        """
         queries: List[Tuple[str, float]] = []
 
         # Query 1: Title only (weight 1.0)
